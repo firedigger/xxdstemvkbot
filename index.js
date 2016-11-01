@@ -168,10 +168,10 @@ vk.on('message',(msg) =>
 
     function check_stationary_command(message)
     {
-        stationary_commands.forEach(function (key, value)
+        stationary_commands.forEach(function (value,key)
         {
             if (message == key)
-                sendMessage(value, false);
+                sendMessage(value);
         });
     }
 
