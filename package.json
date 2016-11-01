@@ -1,0 +1,23 @@
+{
+  "name": "xxdstemvkbot",
+  "version": "1.0.0",
+  "description": "vk bot",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/firedigger/xxdstemvkbot.git"
+  },
+  "author": "firedigger",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/firedigger/xxdstemvkbot/issues"
+  },
+  "homepage": "https://github.com/firedigger/xxdstemvkbot#readme",
+  "dependencies": {
+    "request": "^2.76.0",
+    "vk-io": "^2.2.1"
+  }
+}
