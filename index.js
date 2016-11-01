@@ -274,6 +274,11 @@ vk.on('message',(msg) =>
 
         check_stationary_command(command);
 
+        if (command == 'ignore_list')
+        {
+            sendMessage(request_str + 'Ignored list: ' + ignore_list.showValues());
+        }
+
         if (sender == xxdstem_id || sender == digger_id) {
 
             if (command == 'clear_history')

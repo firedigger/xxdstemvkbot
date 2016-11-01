@@ -46,6 +46,16 @@ SerializableSet.prototype.clear = function () {
     this.values.clear();
 };
 
+SerializableSet.prototype.showValues = function (sep) {
+    if (!sep)
+        sep = ',';
+    var result = '';
+    this.forEach(function (elem) {
+       result+=elem+sep;
+    });
+    return result.slice(0,-sep.length);
+};
+
 SerializableSet.prototype.add_hash_and_check = function (value)
 {
     var hashed = hashFnv32a(value);
