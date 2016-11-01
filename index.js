@@ -184,6 +184,17 @@ vk.on('message',(msg) =>
         return false;
     }
 
+    function processYandereRequest(body)
+    {
+        processContent(function () {
+            return randomArrayElement(parseYanderesPic(body));
+        },function (answer) {
+            sendVkPic(answer,request_str);
+        },function (answer) {
+            return bayan_checker.add_hash_and_check(answer);
+        });
+    }
+
     if (msgtext.startsWith('!'))
     {
         var words = msgtext.split(' ');
@@ -207,16 +218,64 @@ vk.on('message',(msg) =>
                     }
                     else
                     {
-
                         request.get("https://yande.re/post?tags=" + args[0], function (err, res, body)
                         {
-                            processContent(function () {
-                                return randomArrayElement(parseYanderesPic(body));
-                            },function (answer) {
-                                sendVkPic(answer,request_str);
-                            },function (answer) {
-                                return bayan_checker.add_hash_and_check(answer);
-                            });
+                            if (body.indexOf('Nobody here but us chickens!') != -1)
+                            {
+                                request.get("https://yande.re/tag?name=" + args[0] + "&type=&order=count", function (err, res, body)
+                                {
+                                    //console.log(body);
+                                    var elem_exp = /<td align="right">[^]*?>\?<\/a>/g;
+
+                                    var count_exp = '<td align="right">.*?</td>';
+                                    var title_exp = /title=.*?>/i;
+
+                                    var matches = body.match(elem_exp);
+
+                                    //console.log(matches);
+
+                                    var counts = [];
+                                    var sum = 0;
+                                    var titles = [];
+
+                                    matches.forEach(function (elem)
+                                    {
+                                        //console.log(elem);
+                                        var count = (+elem.match(new RegExp(count_exp)).toString().slice(6,-2));
+                                        var title = elem.match(new RegExp(title_exp)).toString().slice(6,-2);
+
+                                        counts.push(count);
+                                        titles.push(title);
+                                        sum+=count;
+
+                                    });
+
+                                    //console.log(titles);
+
+                                    var v = getRandomInt(0,sum);
+
+                                    var c = 0;
+                                    var i = 0;
+                                    while (c < v)
+                                    {
+                                        c+=counts[i];
+                                        i++;
+                                    }
+
+                                    args[0] = titles[i];
+
+                                    request_str+= ' fixed to ' + args[0] + '\n';
+
+                                    request.get("https://yande.re/post?tags=" + args[0], function (err, res, body)
+                                    {
+                                        processYandereRequest(body);
+                                    });
+                                });
+                            }
+                            else
+                            {
+                                processYandereRequest(body);
+                            }
                         });
                     }
                 }
