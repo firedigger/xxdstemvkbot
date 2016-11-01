@@ -19,7 +19,7 @@ if (fs.existsSync(bayans_filename))
 }
 
 const raz =  ["pantsu","awwnime","ecchi"];
-const ignore = ["penis","dick","milf","onetruerem","rem_(re_zero)"];
+const ignore = ["penis","dick","milf","onetruerem","rem_(re_zero)","porn","cock","porno","pornstars","blowjob"];
 const dicker = ["photo9680305_360353548","photo9680305_373629840","photo9680305_356010821","photo9680305_340526271","photo9680305_324159352","photo9680305_248221743","photo297755100_438730139"];
 const xxdstem_id = 314301750;
 const max_counter = 10;
