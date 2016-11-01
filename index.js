@@ -238,6 +238,11 @@ vk.on('message',(msg) =>
                                     var sum = 0;
                                     var titles = [];
 
+                                    if (!matches) {
+                                        sendMessage(request_str + 'No matches found!');
+                                        return;
+                                    }
+
                                     matches.forEach(function (elem)
                                     {
                                         //console.log(elem);
