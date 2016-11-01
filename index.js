@@ -1,27 +1,38 @@
 const request = require("request");
 const fs = require('fs');
 const vk = new (require('vk-io'));
-var stationary_commands_lib = require('./stationary_commands');
-var stationary_commands = new stationary_commands_lib();
-var bayan_checker_lib = require('./bayan_checker');
-var bayan_checker = new bayan_checker_lib();
+const SerializableMap = require('./SerializableMap');
+const SerializableSet = require('./SerializableSet');
+
 const commands_filename = 'commands.txt';
-const bayans_filename = 'bayans.txt';
+const bayan_filename = 'bayans.txt';
+const ignore_list_filename = 'ignore_list.txt';
 
-if (fs.existsSync(commands_filename))
+var stationary_commands = new SerializableMap();
+var bayan_checker = new SerializableSet();
+var ignore_list = new SerializableSet();
+
+function initializeStructure(structure,filename, initializerList)
 {
-    stationary_commands.load_from_file(commands_filename);
+    if (fs.existsSync(filename))
+    {
+        structure.load_from_file(filename);
+    }
+    else
+    {
+        structure.initializeFromArray(initializerList);
+    }
 }
 
-if (fs.existsSync(bayans_filename))
-{
-    bayan_checker.load_from_file(bayans_filename);
-}
+initializeStructure(stationary_commands, commands_filename, [['digger','уебок!'],['xxdstem','красава!']]);
+initializeStructure(bayan_checker, bayan_filename, []);
+initializeStructure(ignore_list, ignore_list_filename, ["penis","dick","milf","onetruerem","rem_(re_zero)","porn","cock","porno","pornstars","blowjob","love_live!","love_live!_school_idol_festival","love_live!_school_idol_diary_special_edition"]);
 
-const raz =  ["pantsu","awwnime","ecchi"];
-const ignore = ["penis","dick","milf","onetruerem","rem_(re_zero)","ram_(re_zero)","porn","cock","porno","pornstars","blowjob","love_live!","love_live!_school_idol_festival","love_live!_school_idol_diary_special_edition"];
+const defaultSubreddit =  ["pantsu","awwnime","ecchi"];
+
 const dicker = ["photo9680305_360353548","photo9680305_373629840","photo9680305_356010821","photo9680305_340526271","photo9680305_324159352","photo9680305_248221743","photo297755100_438730139"];
 const xxdstem_id = 314301750;
+const digger_id = 9680305;
 const max_counter = 10;
 
 function getRandomInt(min, max)
@@ -131,7 +142,6 @@ vk.on('message',(msg) =>
             while(!answer || bayanCheck(answer))
             {
                 answer = contentRetrieval();
-                //console.log(answer);
                 i++;
                 if (i > max_counter)
                     break;
@@ -159,16 +169,16 @@ vk.on('message',(msg) =>
 
     function check_stationary_command(message)
     {
-        stationary_commands.forEach(function (key, value)
+        stationary_commands.forEach(function (value,key)
         {
             if (message == key)
-                sendMessage(value, false);
+                sendMessage(value);
         });
     }
 
     function checkIgnore(arg)
     {
-        if (ignore.indexOf(arg) > -1)
+        if (ignore_list.has(arg))
             sendMessage(request_str + "Эта хуйня в игноре!");
         else
             return true;
@@ -206,7 +216,7 @@ vk.on('message',(msg) =>
                             },function (answer) {
                                 sendVkPic(answer,request_str);
                             },function (answer) {
-                                return bayan_checker.add_and_check(answer);
+                                return bayan_checker.add_hash_and_check(answer);
                             });
                         });
                     }
@@ -218,7 +228,7 @@ vk.on('message',(msg) =>
         {
             if (args.length == 0)
             {
-                args = [randomArrayElement(raz)];
+                args = [randomArrayElement(defaultSubreddit)];
             }
             if (checkIgnore(args[0]))
             {
@@ -229,7 +239,7 @@ vk.on('message',(msg) =>
                     },function (answer) {
                         sendVkPic(answer.pic,request_str + "https://www.reddit.com"+answer.redd);
                     },function (answer) {
-                        return bayan_checker.add_and_check(answer.pic);
+                        return bayan_checker.add_hash_and_check(answer.pic);
                     });
                 });
             }
@@ -244,7 +254,7 @@ vk.on('message',(msg) =>
                 },function (answer) {
                     sendMessage(request_str + answer);
                 },function (answer) {
-                    return bayan_checker.add_and_check(answer);
+                    return bayan_checker.add_hash_and_check(answer);
                 });
             });
         }
@@ -258,14 +268,42 @@ vk.on('message',(msg) =>
                 },function (answer) {
                     sendMessage(request_str + answer);
                 },function (answer) {
-                    return bayan_checker.add_and_check(answer);
+                    return bayan_checker.add_hash_and_check(answer);
                 });
             });
         }
 
         check_stationary_command(command);
 
-        if (sender == xxdstem_id) {
+        if (command == 'ignore_list')
+        {
+            sendMessage(request_str + 'Ignored list: ' + ignore_list.showValues());
+        }
+
+        if (sender == xxdstem_id || sender == digger_id) {
+
+            if (command == 'clear_history')
+            {
+                sendMessage('Баяны очищены!');
+                bayan_checker.clear();
+            }
+
+            if (command == 'ignore_add')
+            {
+                if (checkMinArgsNumber(args, 1)) {
+                    ignore_list.add(args[0]);
+                    sendMessage('Добавлен игнор ' + args[0]);
+                }
+            }
+
+            if (command == 'ignore_del')
+            {
+                if (checkMinArgsNumber(args, 1)) {
+                    ignore_list.add(args[0]);
+                    sendMessage('Удален игнор ' + args[0]);
+                }
+            }
+
             if (command == 'addcom') {
                 if (checkMinArgsNumber(args, 2)) {
                     stationary_commands.add(args[0], args.slice(1).join(' '));
@@ -300,6 +338,7 @@ if (process.platform === "win32") {
 }
 process.on("SIGINT", function () {
     stationary_commands.save_to_file(commands_filename);
-    bayan_checker.save_to_file(bayans_filename);
+    bayan_checker.save_to_file(bayan_filename);
+    ignore_list.save_to_file(ignore_list_filename);
     process.exit();
 });
