@@ -27,12 +27,26 @@ function hashFnv32a(str, asString, seed)
     //return str;
 }
 
-function Bayan_checker()
+function SerializableSet()
 {
     this.values = new Set();
 }
 
-Bayan_checker.prototype.add_and_check = function (value)
+SerializableSet.prototype.initializeFromArray = function (array)
+{
+    this.values = new Set(array);
+};
+
+SerializableSet.prototype.has = function (key)
+{
+    return this.values.has(key);
+};
+
+SerializableSet.prototype.clear = function () {
+    this.values.clear();
+};
+
+SerializableSet.prototype.add_hash_and_check = function (value)
 {
     var hashed = hashFnv32a(value);
     var flag = this.values.has(hashed);
@@ -45,21 +59,26 @@ Bayan_checker.prototype.add_and_check = function (value)
     return flag;
 };
 
+SerializableSet.prototype.add = function (elem)
+{
+    this.values.add(elem);
+};
 
-Bayan_checker.prototype.save_to_file = function (filename)
+
+SerializableSet.prototype.save_to_file = function (filename)
 {
     fs.writeFileSync(filename,setToJson(this.values));
 };
 
-Bayan_checker.prototype.load_from_file = function (filename)
+SerializableSet.prototype.load_from_file = function (filename)
 {
     var storage_str = fs.readFileSync(filename);
     this.values = jsonToSet(storage_str);
 };
 
-Bayan_checker.prototype.forEach = function (callback)
+SerializableSet.prototype.forEach = function (callback)
 {
     this.values.forEach(callback);
 };
 
-module.exports = Bayan_checker;
+module.exports = SerializableSet;
