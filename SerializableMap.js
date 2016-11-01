@@ -4,16 +4,10 @@ function mapToJson(map)
 {
     return JSON.stringify([...map]);
 }
-function buildMap(obj) {
-    let map = new Map();
-    Object.keys(obj).forEach(key => {
-        map.set(key, obj[key]);
-    });
-    return map;
-}
-function jsonToMap(jsonStr)
+
+    function jsonToMap(jsonStr)
 {
-    return buildMap(JSON.parse(jsonStr));
+    return new Map(JSON.parse(jsonStr));
 }
 
 function SerializableMap()
