@@ -4,9 +4,9 @@ const vk = new (require('vk-io'));
 const SerializableMap = require('./SerializableMap');
 const SerializableSet = require('./SerializableSet');
 
-const commands_filename = 'commands.txt';
-const bayan_filename = 'bayans.txt';
-const ignore_list_filename = 'ignore_list.txt';
+const commands_filename = '/root/commands.txt';
+const bayan_filename = '/root/bayans.txt';
+const ignore_list_filename = '/root/ignore_list.txt';
 
 var stationary_commands = new SerializableMap();
 var bayan_checker = new SerializableSet();
@@ -61,7 +61,7 @@ function parseRedditPic(str, index)
     return {pic:pic,redd:redd};
 }
 
-var config = JSON.parse(fs.readFileSync('config.json'));
+var config = JSON.parse(fs.readFileSync('/root/config.json'));
 
 
 vk.setToken(config.token);
