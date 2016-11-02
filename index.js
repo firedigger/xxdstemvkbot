@@ -60,13 +60,6 @@ function parseRedditPic(str, index)
     var redd = parsed_body['permalink'];
     return {pic:pic,redd:redd};
 }
-var http = require('http');
-var static = require('node-static');
-var file = new static.Server('.');
-
-http.createServer(function(req, res) {
-  file.serve(req, res);
-}).listen(8080);
 
 var config = JSON.parse(fs.readFileSync('config.json'));
 
