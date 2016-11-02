@@ -75,6 +75,11 @@ SerializableSet.prototype.add = function (elem)
 };
 
 
+SerializableSet.prototype.delete = function (elem)
+{
+    this.values.delete(elem);
+};
+
 SerializableSet.prototype.save_to_file = function (filename)
 {
     fs.writeFileSync(filename,setToJson(this.values));

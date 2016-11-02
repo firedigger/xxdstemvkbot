@@ -366,7 +366,7 @@ vk.on('message',(msg) =>
             if (command == 'ignore_del')
             {
                 if (checkMinArgsNumber(args, 1)) {
-                    ignore_list.add(args[0]);
+                    ignore_list.delete(args[0]);
                     sendMessage('Удален игнор ' + args[0]);
                 }
 				 ignore_list.save_to_file(ignore_list_filename);
