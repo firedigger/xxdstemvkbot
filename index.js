@@ -364,11 +364,20 @@ vk.on('message',(msg) =>
                 }
 				 ignore_list.save_to_file(ignore_list_filename);
             }
+            
+            if (command == 'editcom') {
+                if (checkMinArgsNumber(args, 2)) {
+                    stationary_commands.edit(args[0], args.slice(1).join(' '));
+                    sendMessage('Команда ' + args[0] +' отредактирована!');
+                }
+
+                stationary_commands.save_to_file(commands_filename);
+            }
 
             if (command == 'addcom') {
                 if (checkMinArgsNumber(args, 2)) {
                     stationary_commands.add(args[0], args.slice(1).join(' '));
-                    sendMessage('Добавлена команда ' + args[0]);
+                    sendMessage('Команда ' + args[0] +' добавлена!');
                 }
 
                 stationary_commands.save_to_file(commands_filename);
@@ -377,7 +386,7 @@ vk.on('message',(msg) =>
             if (command == 'delcom') {
                 if (checkMinArgsNumber(args, 1)) {
                     stationary_commands.delete(args[0]);
-                    sendMessage('Удалена команда ' + args[0]);
+                    sendMessage('Команда ' + args[0] +' удалена!');
                 }
                 stationary_commands.save_to_file(commands_filename);
             }
