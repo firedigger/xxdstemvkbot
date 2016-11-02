@@ -349,45 +349,53 @@ vk.on('message',(msg) =>
 
             if (command == 'ignore_add')
             {
-                if (checkMinArgsNumber(args, 1)) {
+                if (checkMinArgsNumber(args, 1) &&  !stationary_commands.has(args[0])) {
                     ignore_list.add(args[0]);
                     sendMessage('Добавлен игнор ' + args[0]);
                 }
+                else
+            return   sendMessage(args[0] +' уже есть в списке игнора!');
 				 ignore_list.save_to_file(ignore_list_filename);
             }
 
             if (command == 'ignore_del')
             {
-                if (checkMinArgsNumber(args, 1)) {
+                if (checkMinArgsNumber(args, 1)  &&  stationary_commands.has(args[0])) {
                     ignore_list.delete(args[0]);
                     sendMessage('Удален игнор ' + args[0]);
                 }
+                else
+                    return   sendMessage(args[0] +' нет в списке игнора!');
 				 ignore_list.save_to_file(ignore_list_filename);
             }
             
             if (command == 'editcom') {
-                if (checkMinArgsNumber(args, 2)) {
+                if (checkMinArgsNumber(args, 2) &&  stationary_commands.has(args[0])) {                   
                     stationary_commands.edit(args[0], args.slice(1).join(' '));
                     sendMessage('Команда ' + args[0] +' отредактирована!');
-                }
+                }else
+                    return   sendMessage('Команды ' + args[0] +' нет в списке!');
 
                 stationary_commands.save_to_file(commands_filename);
             }
 
             if (command == 'addcom') {
-                if (checkMinArgsNumber(args, 2)) {
+                if (checkMinArgsNumber(args, 2) && !stationary_commands.has(args[0])) {
                     stationary_commands.add(args[0], args.slice(1).join(' '));
                     sendMessage('Команда ' + args[0] +' добавлена!');
-                }
+                }else
+            return   sendMessage('Команда ' + args[0] +' уже есть в списке!');
 
                 stationary_commands.save_to_file(commands_filename);
             }
 
             if (command == 'delcom') {
-                if (checkMinArgsNumber(args, 1)) {
+                if (checkMinArgsNumber(args, 1)  &&  stationary_commands.has(args[0])) {
                     stationary_commands.delete(args[0]);
                     sendMessage('Команда ' + args[0] +' удалена!');
                 }
+                else
+                    return   sendMessage('Команды ' + args[0] +' нет в списке!');
                 stationary_commands.save_to_file(commands_filename);
             }
         }
