@@ -32,6 +32,10 @@ SerializableMap.prototype.get = function (key) {
     return this.commands.get(key);
 };
 
+SerializableMap.prototype.has = function (key) {
+    return this.commands.has(key);
+ };
+ 
 SerializableMap.prototype.edit = function (key,value) {
     this.commands.delete(key);
     this.commands.set(key,value); 
