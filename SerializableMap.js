@@ -21,7 +21,7 @@ SerializableMap.prototype.initializeFromArray = function (array)
 };
 
 SerializableMap.prototype.add = function (key, value) {
-    this.commands.set(key,value);
+         this.commands.set(key,value);
 };
 
 SerializableMap.prototype.delete = function (key) {

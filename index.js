@@ -5,7 +5,7 @@ const SerializableMap = require('./SerializableMap');
 const SerializableSet = require('./SerializableSet');
 
 const commands_filename = '/root/commands.txt';
-const bayan_filename = '/root`/bayans.txt';
+const bayan_filename = '/root/bayans.txt';
 const ignore_list_filename = '/root/ignore_list.txt';
 
 var stationary_commands = new SerializableMap();
@@ -111,10 +111,10 @@ function generateRequestString(msg)
 
 vk.on('message',(msg) =>
 {
-    var msgtext = "";
+
     var msgattach = "";
     if(msg.text != null)
-        msgtext = msg.text.toLowerCase();
+        msgtext = msg.text;
 	
     var sender = msg.user;
 
@@ -199,11 +199,10 @@ vk.on('message',(msg) =>
     if (msgtext.startsWith('!'))
     {
         var words = msgtext.split(' ');
-        var command = words[0].slice(1);
+        var command = words[0].slice(1).toLowerCase();
         var args = words.slice(1);
-
-        //console.log(command);
-
+        var attach = "";
+       
         var request_str = generateRequestString(msg);
 
 
