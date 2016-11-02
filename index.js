@@ -4,9 +4,9 @@ const vk = new (require('vk-io'));
 const SerializableMap = require('./SerializableMap');
 const SerializableSet = require('./SerializableSet');
 
-const commands_filename = 'commands.txt';
-const bayan_filename = 'bayans.txt';
-const ignore_list_filename = 'ignore_list.txt';
+const commands_filename = '/root/commands.txt';
+const bayan_filename = '/root`/bayans.txt';
+const ignore_list_filename = '/root/ignore_list.txt';
 
 var stationary_commands = new SerializableMap();
 var bayan_checker = new SerializableSet();
@@ -112,10 +112,10 @@ function generateRequestString(msg)
 vk.on('message',(msg) =>
 {
     var msgtext = "";
-
+    var msgattach = "";
     if(msg.text != null)
         msgtext = msg.text.toLowerCase();
-
+	
     var sender = msg.user;
 
     function sendVkPic(picLink,message)
@@ -350,7 +350,9 @@ vk.on('message',(msg) =>
             {
                 sendMessage('Баяны очищены!');
                 bayan_checker.clear();
+				bayan_checker.save_to_file(bayan_filename);
             }
+			
 
             if (command == 'ignore_add')
             {
@@ -358,6 +360,7 @@ vk.on('message',(msg) =>
                     ignore_list.add(args[0]);
                     sendMessage('Добавлен игнор ' + args[0]);
                 }
+				 ignore_list.save_to_file(ignore_list_filename);
             }
 
             if (command == 'ignore_del')
@@ -366,6 +369,7 @@ vk.on('message',(msg) =>
                     ignore_list.add(args[0]);
                     sendMessage('Удален игнор ' + args[0]);
                 }
+				 ignore_list.save_to_file(ignore_list_filename);
             }
 
             if (command == 'addcom') {
@@ -382,7 +386,6 @@ vk.on('message',(msg) =>
                     stationary_commands.delete(args[0]);
                     sendMessage('Удалена команда ' + args[0]);
                 }
-
                 stationary_commands.save_to_file(commands_filename);
             }
         }
