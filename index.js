@@ -115,9 +115,7 @@ vk.on('message',(msg) =>
     var msgattach = "";
     if(msg.text != null)
         msgtext = msg.text;
-	
     var sender = msg.user;
-
     function sendVkPic(picLink,message)
     {
         vk.upload.message({
@@ -201,11 +199,7 @@ vk.on('message',(msg) =>
         var words = msgtext.split(' ');
         var command = words[0].slice(1).toLowerCase();
         var args = words.slice(1);
-        var attach = "";
-       
         var request_str = generateRequestString(msg);
-
-
         if (command == 'yan')
         {
             if (checkMinArgsNumber(args,1))
