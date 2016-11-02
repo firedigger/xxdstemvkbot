@@ -112,7 +112,7 @@ function generateRequestString(msg)
 vk.on('message',(msg) =>
 {
 
-    var msgattach = "";
+    var msgtext = "";
     if(msg.text != null)
         msgtext = msg.text;
     var sender = msg.user;
