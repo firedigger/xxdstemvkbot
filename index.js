@@ -395,7 +395,7 @@ vk.on('message',(msg) =>
                     sendMessage('Команда ' + args[0] +' удалена!');
                 }
                 else
-                    return   sendMessage('Команды ' + args[0] +' нет в списке!');
+                    return sendMessage('Команды ' + args[0] +' нет в списке!');
                 stationary_commands.save_to_file(commands_filename);
             }
         }

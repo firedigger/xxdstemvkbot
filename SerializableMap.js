@@ -21,7 +21,7 @@ SerializableMap.prototype.initializeFromArray = function (array)
 };
 
 SerializableMap.prototype.add = function (key, value) {
-         this.commands.set(key,value,"smthing cool");
+         this.commands.set(key,value);
 };
 
 SerializableMap.prototype.delete = function (key) {
@@ -30,10 +30,6 @@ SerializableMap.prototype.delete = function (key) {
 
 SerializableMap.prototype.get = function (key) {
     return this.commands.get(key);
-};
-
-SerializableMap.prototype.has = function (key) {
-    return this.commands.has(key);
 };
 
 SerializableMap.prototype.edit = function (key,value) {
