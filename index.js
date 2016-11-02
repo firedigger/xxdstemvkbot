@@ -31,8 +31,7 @@ initializeStructure(ignore_list, ignore_list_filename, ["penis","dick","milf","o
 const defaultSubreddit =  ["pantsu","awwnime","ecchi"];
 
 const dicker = ["photo9680305_360353548","photo9680305_373629840","photo9680305_356010821","photo9680305_340526271","photo9680305_324159352","photo9680305_248221743","photo297755100_438730139"];
-const xxdstem_id = 314301750;
-const digger_id = 9680305;
+const admins = [314301750,9680305];
 const max_counter = 10;
 
 function getRandomInt(min, max)
@@ -176,7 +175,7 @@ vk.on('message',(msg) =>
 
     function checkIgnore(arg)
     {
-        if (ignore_list.has(arg))
+        if (ignore_list.has(arg) && admins.indexOf(sender) == -1)
             sendMessage(request_str + "Эта хуйня в игноре!");
         else
             return true;
@@ -338,7 +337,7 @@ vk.on('message',(msg) =>
             sendMessage(request_str + 'Ignored list: ' + ignore_list.showValues());
         }
 
-        if (sender == xxdstem_id || sender == digger_id) {
+        if (admins.indexOf(sender) != -1) {
 
             if (command == 'clear_history')
             {
