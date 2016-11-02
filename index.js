@@ -294,6 +294,7 @@ vk.on('message',(msg) =>
             {
                 args = [randomArrayElement(defaultSubreddit)];
             }
+			else
             if (checkIgnore(args[0]))
             {
                 request.get("https://www.reddit.com/r/"+args[0]+"/new/.json", function(err,res,body)
