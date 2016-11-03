@@ -3,7 +3,7 @@ const fs = require('fs');
 const vk = new (require('vk-io'));
 const SerializableMap = require('./SerializableMap');
 const SerializableSet = require('./SerializableSet');
-
+const Recognize = require('recognize');
 const config = JSON.parse(fs.readFileSync('config.json'));
 
 const commands_filename = config.commands_filename;
@@ -90,7 +90,12 @@ vk.setToken(config.token);
 vk.longpoll().then(() =>
 {
     console.log('Longpoll запущен!');
+    
 });
+var recognize = new Recognize('rucaptcha', {
+    key:'811044668328880db7d3e6a5b5bda38a'
+});
+
 
 function randomArrayElement(arr)
 {
@@ -137,23 +142,33 @@ function generateRequestString(msg)
     return 'REQUEST: ' + msg.text + '\n';
 }
 
+var download = function(uri, filename, callback){
+  request.head(uri, function(err, res, body){
+    request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+  });
+};
+
+function SendCaptcha(src, callback){
+    download(src, 'captcha.png', function(){
+ fs.readFile('./captcha.png', function(err, data){
+    recognize.solving(data, function(err, id, code)
+    {
+        return callback(code);
+         })
+    })
+});
+    
+}
+
+
 //TODO for xxdstem -> add captcha handler
-/*vk.setCaptchaHandler((src,again) => {
-    handleCaptcha(src)
-        .then((code) => {
-            again(code)
-                .then(() => {
-                    console.log('Капча введена верно!');
-                })
-                .catch(() => {
-                    console.error('Капча введена не верно!');
-                });
-        });
-});*/
+vk.setCaptchaHandler((src,again) => {
+    SendCaptcha(src, function(code) { //Получили код, нужно чёто делать с капчей });
+});
 
 vk.on('message',(msg) =>
 {
-    console.log(msg);
+   
 
     var msgtext = "";
     if(msg.text != null)
