@@ -4,13 +4,33 @@ const vk = new (require('vk-io'));
 const SerializableMap = require('./SerializableMap');
 const SerializableSet = require('./SerializableSet');
 
-const commands_filename = '/root/commands.txt';
-const bayan_filename = '/root/bayans.txt';
-const ignore_list_filename = '/root/ignore_list.txt';
+const config = JSON.parse(fs.readFileSync('config.json'));
+
+const commands_filename = config.commands_filename;
+const bayan_filename = config.bayan_filename;
+const ignore_list_filename = config.ignore_list_filename;
 
 var stationary_commands = new SerializableMap();
 var bayan_checker = new SerializableSet();
 var ignore_list = new SerializableSet();
+
+function hashFnv32a(str, asString, seed)
+{
+
+    var i, l,
+        hval = (seed === undefined) ? 0x811c9dc5 : seed;
+
+    for (i = 0, l = str.length; i < l; i++) {
+        hval ^= str.charCodeAt(i);
+        hval += (hval << 1) + (hval << 4) + (hval << 7) + (hval << 8) + (hval << 24);
+    }
+    if( asString ){
+        // Convert to 8 digit hex string
+        return ("0000000" + (hval >>> 0).toString(16)).substr(-8);
+    }
+    return hval >>> 0;
+    //return str;
+}
 
 function initializeStructure(structure,filename, initializerList)
 {
@@ -20,19 +40,23 @@ function initializeStructure(structure,filename, initializerList)
     }
     else
     {
-        structure.initializeFromArray(initializerList);
+        if (initializerList)
+            structure.initializeFromArray(initializerList);
     }
 }
 
-initializeStructure(stationary_commands, commands_filename, [['digger','уебок!'],['xxdstem','красава!']]);
-initializeStructure(bayan_checker, bayan_filename, []);
-initializeStructure(ignore_list, ignore_list_filename, ["penis","dick","milf","onetruerem","rem_(re_zero)","porn","cock","porno","pornstars","blowjob","love_live!","love_live!_school_idol_festival","love_live!_school_idol_diary_special_edition"]);
+initializeStructure(stationary_commands, commands_filename);
+initializeStructure(bayan_checker, bayan_filename);
+initializeStructure(ignore_list, ignore_list_filename);
 
-const defaultSubreddit =  ["pantsu","awwnime","ecchi"];
+const defaultSubreddit = config.defaultSubreddits;
+const defaultYandere = config.defaultYandere;
 
-const dicker = ["photo9680305_360353548","photo9680305_373629840","photo9680305_356010821","photo9680305_340526271","photo9680305_324159352","photo9680305_248221743","photo297755100_438730139"];
-const admins = [314301750,9680305];
-const max_counter = 10;
+const dicker_photos = ["photo9680305_360353548","photo9680305_373629840","photo9680305_356010821","photo9680305_340526271","photo9680305_324159352","photo9680305_248221743","photo297755100_438730139"];
+const admins = config.admins;
+const max_bayan_counter = 10;
+
+var command_queue = [];
 
 function getRandomInt(min, max)
 {
@@ -56,18 +80,17 @@ function parseRedditPic(str, index)
 {
     var parsed_body = JSON.parse(str)['data']['children'][index]['data'];
     var pic = parsed_body['preview']['images'][0]['source']['url'];
-    var redd = parsed_body['permalink'];
-    return {pic:pic,redd:redd};
+    var link = parsed_body['permalink'];
+    var title = parsed_body['title'];
+    return {pic:pic,link:link,title:title};
 }
-
-var config = JSON.parse(fs.readFileSync('config.json'));
-
 
 vk.setToken(config.token);
 
-vk.longpoll().then(() => {
-        console.log('Longpoll запущен!');
-    });
+vk.longpoll().then(() =>
+{
+    console.log('Longpoll запущен!');
+});
 
 function randomArrayElement(arr)
 {
@@ -97,10 +120,16 @@ function parseYandexNews(str)
     return result;
 }
 
-
 function parseBashQuote(str)
 {
     return str.replace('<br.+?/>','\n');
+}
+
+function saveFiles()
+{
+    stationary_commands.save_to_file(commands_filename);
+    bayan_checker.save_to_file(bayan_filename);
+    ignore_list.save_to_file(ignore_list_filename);
 }
 
 function generateRequestString(msg)
@@ -108,13 +137,39 @@ function generateRequestString(msg)
     return 'REQUEST: ' + msg.text + '\n';
 }
 
+//TODO for xxdstem -> add captcha handler
+/*vk.setCaptchaHandler((src,again) => {
+    handleCaptcha(src)
+        .then((code) => {
+            again(code)
+                .then(() => {
+                    console.log('Капча введена верно!');
+                })
+                .catch(() => {
+                    console.error('Капча введена не верно!');
+                });
+        });
+});*/
+
 vk.on('message',(msg) =>
 {
+    console.log(msg);
 
     var msgtext = "";
     if(msg.text != null)
         msgtext = msg.text;
     var sender = msg.user;
+
+    command_queue.forEach(function (elem) {
+        if (elem.author == sender)
+        {
+            sendMessage('Команда ' + elem.key + (stationary_commands.has(elem.key) ? ' изменена!' : ' добавлена!'), false);
+            stationary_commands.add(elem.key, {message:msgtext, forward_messages:msg.id});
+            elem.key = '';
+        }
+    });
+    command_queue = command_queue.filter((x) => x.key != '');
+
     function sendVkPic(picLink,message)
     {
         vk.upload.message({
@@ -125,9 +180,12 @@ vk.on('message',(msg) =>
         });
     }
 
-    function sendMessage(message)
+    function sendMessage(message, copy_request)
     {
-        return msg.send(message,{fwd:false});
+        if (copy_request === false)
+            return msg.send(message,{fwd:false});
+        else
+            return msg.send(request_str + message,{fwd:false});
     }
 
     function processContent(contentRetrieval,contentSender, bayanCheck)
@@ -140,17 +198,17 @@ vk.on('message',(msg) =>
             {
                 answer = contentRetrieval();
                 i++;
-                if (i > max_counter)
+                if (i > max_bayan_counter)
                     break;
             }
-            if (i > max_counter)
-                sendMessage(request_str + 'Забаянился');
+            if (i > max_bayan_counter)
+                sendMessage('Забаянился');
             else
                 contentSender(answer);
         }
         catch (err)
         {
-            sendMessage(request_str + "хуйня какая-та!");
+            sendMessage("хуйня какая-та!");
         }
     }
 
@@ -158,10 +216,16 @@ vk.on('message',(msg) =>
     {
         if (args.length < min)
         {
-            sendMessage(request_str + 'Нужно минимум ' + min + ' аргументов!');
+            sendMessage('Нужно минимум ' + min + ' аргументов!');
             return false;
         }
         return true;
+    }
+
+    function sendMessageObject(msgObject)
+    {
+        //console.log(params);
+        return msg.send(msgObject);
     }
 
     function check_stationary_command(message)
@@ -169,14 +233,16 @@ vk.on('message',(msg) =>
         stationary_commands.forEach(function (value,key)
         {
             if (message == key)
-                sendMessage(value);
+            {
+                sendMessageObject(value);
+            }
         });
     }
 
     function checkIgnore(arg)
     {
         if (ignore_list.has(arg) && admins.indexOf(sender) == -1)
-            sendMessage(request_str + "Эта хуйня в игноре!");
+            sendMessage("Эта хуйня в игноре!");
         else
             return true;
         return false;
@@ -189,8 +255,15 @@ vk.on('message',(msg) =>
         },function (answer) {
             sendVkPic(answer,request_str);
         },function (answer) {
-            return bayan_checker.add_hash_and_check(answer);
+            return bayan_checker.add(hashFnv32a(answer));
         });
+    }
+
+    function parseForwardedMessagesIds(fwds)
+    {
+        return fwds.map(function (elem) {
+            return elem.id;
+        }).join(',');
     }
 
     if (msgtext.startsWith('!'))
@@ -201,81 +274,73 @@ vk.on('message',(msg) =>
         var request_str = generateRequestString(msg);
         if (command == 'yan')
         {
-            if (checkMinArgsNumber(args,1))
+            if (args.length == 0)
             {
-                if (checkIgnore(args[0]))
-                {
-                    if (args[0] == 'digger' || args[0] == 'dicker' || args[0] == 'диккер')
-                    {
-                        sendVkPic(randomArrayElement(dicker), request_str + "ееее диккер!");
-                    }
-                    else
-                    {
-                        request.get("https://yande.re/post?tags=" + args[0], function (err, res, body)
-                        {
-                            if (body.indexOf('Nobody here but us chickens!') != -1)
-                            {
-                                request.get("https://yande.re/tag?name=" + args[0] + "&type=&order=count", function (err, res, body)
-                                {
-                                    //console.log(body);
-                                    var elem_exp = /<td align="right">[^]*?>\?<\/a>/g;
+                args = [randomArrayElement(defaultYandere)];
+                request_str += 'fixed to ' + args[0] + '\n';
+            }
+            if (checkIgnore(args[0])) {
+                if (args[0] == 'digger' || args[0] == 'dicker_photos' || args[0] == 'диккер') {
+                    msg.send("ееее диккер!",{ attach: randomArrayElement(dicker_photos), fwd:false});
+                }
+                else {
+                    request.get("https://yande.re/post?tags=" + args[0], function (err, res, body) {
+                        if (body.indexOf('Nobody here but us chickens!') != -1) {
+                            request.get("https://yande.re/tag?name=" + args[0] + "&type=&order=count", function (err, res, body) {
+                                //console.log(body);
+                                var elem_exp = /<td align="right">[^]*?>\?<\/a>/g;
 
-                                    var count_exp = '<td align="right">.*?</td>';
-                                    var title_exp = /title=.*?>/i;
+                                var count_exp = '<td align="right">.*?</td>';
+                                var title_exp = /title=.*?>/i;
 
-                                    var matches = body.match(elem_exp);
+                                var matches = body.match(elem_exp);
 
-                                    //console.log(matches);
+                                //console.log(matches);
 
-                                    var counts = [];
-                                    var sum = 0;
-                                    var titles = [];
+                                var counts = [];
+                                var sum = 0;
+                                var titles = [];
 
-                                    if (!matches) {
-                                        sendMessage(request_str + 'No matches found!');
-                                        return;
-                                    }
+                                if (!matches) {
+                                    sendMessage('No matches found!');
+                                    return;
+                                }
 
-                                    matches.forEach(function (elem)
-                                    {
-                                        //console.log(elem);
-                                        var count = (+elem.match(new RegExp(count_exp)).toString().slice(6,-2));
-                                        var title = elem.match(new RegExp(title_exp)).toString().slice(6,-2);
+                                matches.forEach(function (elem) {
+                                    //console.log(elem);
+                                    var count = (+elem.match(new RegExp(count_exp)).toString().slice(6, -2));
+                                    var title = elem.match(new RegExp(title_exp)).toString().slice(6, -2);
 
-                                        counts.push(count);
-                                        titles.push(title);
-                                        sum+=count;
+                                    counts.push(count);
+                                    titles.push(title);
+                                    sum += count;
 
-                                    });
-
-                                    //console.log(titles);
-
-                                    var v = getRandomInt(0,sum);
-
-                                    var c = 0;
-                                    var i = 0;
-                                    while (c < v)
-                                    {
-                                        c+=counts[i];
-                                        i++;
-                                    }
-
-                                    args[0] = titles[i];
-
-                                    request_str+= ' fixed to ' + args[0] + '\n';
-
-                                    request.get("https://yande.re/post?tags=" + args[0], function (err, res, body)
-                                    {
-                                        processYandereRequest(body);
-                                    });
                                 });
-                            }
-                            else
-                            {
-                                processYandereRequest(body);
-                            }
-                        });
-                    }
+
+                                //console.log(titles);
+
+                                var v = getRandomInt(0, sum);
+
+                                var c = 0;
+                                var i = 0;
+                                while (c < v) {
+                                    c += counts[i];
+                                    i++;
+                                }
+
+                                args[0] = titles[i];
+
+                                request_str += 'fixed to ' + args[0] + '\n';
+
+                                request.get("https://yande.re/post?tags=" + args[0], function (err, res, body) {
+                                    processYandereRequest(body);
+                                });
+                            });
+                        }
+                        else {
+                            processYandereRequest(body);
+                        }
+                    });
                 }
             }
         }
@@ -285,8 +350,8 @@ vk.on('message',(msg) =>
             if (args.length == 0)
             {
                 args = [randomArrayElement(defaultSubreddit)];
+                request_str += 'fixed to ' + args[0] + '\n';
             }
-			else
             if (checkIgnore(args[0]))
             {
                 request.get("https://www.reddit.com/r/"+args[0]+"/new/.json", function(err,res,body)
@@ -294,9 +359,9 @@ vk.on('message',(msg) =>
                     processContent(function () {
                         return parseRedditPic(body,getRandomInt(0,25));
                     },function (answer) {
-                        sendVkPic(answer.pic,request_str + "https://www.reddit.com"+answer.redd);
+                        sendVkPic(answer.pic,request_str + answer.title + '\n' + "https://www.reddit.com"+answer.link);
                     },function (answer) {
-                        return bayan_checker.add_hash_and_check(answer.pic);
+                        return bayan_checker.add(hashFnv32a(answer.pic));
                     });
                 });
             }
@@ -308,11 +373,11 @@ vk.on('message',(msg) =>
             {
                 processContent(function () {
                     return parseBashQuote(body);
-                },function (answer) {
-                    sendMessage(request_str + answer);
-                },function (answer) {
-                    return bayan_checker.add_hash_and_check(answer);
-                });
+                },sendMessage,
+                    function (answer)
+                    {
+                        return bayan_checker.add(hashFnv32a(answer));
+                    });
             });
         }
 
@@ -322,10 +387,8 @@ vk.on('message',(msg) =>
             {
                 processContent(function () {
                     return parseYandexNews(body);
-                },function (answer) {
-                    sendMessage(request_str + answer);
-                },function (answer) {
-                    return bayan_checker.add_hash_and_check(answer);
+                },sendMessage,function (answer) {
+                    return bayan_checker.add(hashFnv32a(answer));
                 });
             });
         }
@@ -334,69 +397,82 @@ vk.on('message',(msg) =>
 
         if (command == 'ignore_list')
         {
-            sendMessage(request_str + 'Ignored list: ' + ignore_list.showValues());
+            sendMessage('Ignored list: ' + ignore_list.showValues(), false);
         }
 
-        if (admins.indexOf(sender) != -1) {
+        if (admins.indexOf(sender) != -1)
+        {
 
             if (command == 'clear_history')
             {
-                sendMessage('Баяны очищены!');
+                sendMessage('Баяны очищены!', false);
                 bayan_checker.clear();
-				bayan_checker.save_to_file(bayan_filename);
             }
 			
 
             if (command == 'ignore_add')
             {
-                if (checkMinArgsNumber(args, 1) &&  !stationary_commands.has(args[0])) {
-                    ignore_list.add(args[0]);
-                    sendMessage('Добавлен игнор ' + args[0]);
+                if (checkMinArgsNumber(args, 1))
+                {
+                    if (!stationary_commands.has(args[0]))
+                    {
+                        ignore_list.add(args[0]);
+                        sendMessage('Добавлен игнор ' + args[0], false);
+                    }
+                    else
+                        sendMessage(args[0] +' уже есть в списке игнора!');
                 }
-                else
-            return   sendMessage(args[0] +' уже есть в списке игнора!');
-				 ignore_list.save_to_file(ignore_list_filename);
+
             }
 
             if (command == 'ignore_del')
             {
-                if (checkMinArgsNumber(args, 1)  &&  stationary_commands.has(args[0])) {
-                    ignore_list.delete(args[0]);
-                    sendMessage('Удален игнор ' + args[0]);
+                if (checkMinArgsNumber(args, 1))
+                {
+                    if (stationary_commands.has(args[0])) {
+                        ignore_list.delete(args[0]);
+                        sendMessage('Удален игнор ' + args[0], false);
+                    }
+                    else
+                        sendMessage(args[0] +' нет в списке игнора!');
                 }
-                else
-                    return   sendMessage(args[0] +' нет в списке игнора!');
-				 ignore_list.save_to_file(ignore_list_filename);
-            }
-            
-            if (command == 'editcom') {
-                if (checkMinArgsNumber(args, 2) &&  stationary_commands.has(args[0])) {                   
-                    stationary_commands.edit(args[0], args.slice(1).join(' '));
-                    sendMessage('Команда ' + args[0] +' отредактирована!');
-                }else
-                    return   sendMessage('Команды ' + args[0] +' нет в списке!');
-
-                stationary_commands.save_to_file(commands_filename);
             }
 
-            if (command == 'addcom') {
-                if (checkMinArgsNumber(args, 2) && !stationary_commands.has(args[0])) {
-                    stationary_commands.add(args[0], args.slice(1).join(' '));
-                    sendMessage('Команда ' + args[0] +' добавлена!');
-                }else
-            return   sendMessage('Команда ' + args[0] +' уже есть в списке!');
+            if (command == 'addcom')
+            {
+                if (checkMinArgsNumber(args, 1))
+                {
 
-                stationary_commands.save_to_file(commands_filename);
+                    var com;
+
+                    if (args.length > 1)
+                    {
+                        //parseForwardedMessagesIds(msg.fwd)
+                        com = {message: args.slice(1).join(' ')};
+                        sendMessage('Команда ' + args[0] + (stationary_commands.has(args[0]) ? ' изменена!' : ' добавлена!'), false);
+                        stationary_commands.add(args[0], com);
+                    }
+                    else
+                    {
+                        //var response = vk.api.photos.getById({photos:msg.attach.photo.map((x) => x.get).join(',')}).then((response) => console.log(response));
+                        command_queue.push({author:sender,key:args[0]});
+                        sendMessage('Команда ' + args[0] + ' ждет назначения следующим сообщением автора', false);
+                        //console.log(com);
+                    }
+
+                }
             }
 
             if (command == 'delcom') {
-                if (checkMinArgsNumber(args, 1)  &&  stationary_commands.has(args[0])) {
-                    stationary_commands.delete(args[0]);
-                    sendMessage('Команда ' + args[0] +' удалена!');
+                if (checkMinArgsNumber(args, 1))
+                {
+                    if (stationary_commands.has(args[0])) {
+                        stationary_commands.delete(args[0]);
+                        sendMessage('Команда ' + args[0] + ' удалена!', false);
+                    }
+                    else
+                        return sendMessage('Команды ' + args[0] +' нет в списке!');
                 }
-                else
-                    return sendMessage('Команды ' + args[0] +' нет в списке!');
-                stationary_commands.save_to_file(commands_filename);
             }
         }
 
@@ -414,8 +490,6 @@ if (process.platform === "win32") {
     });
 }
 process.on("SIGINT", function () {
-    stationary_commands.save_to_file(commands_filename);
-    bayan_checker.save_to_file(bayan_filename);
-    ignore_list.save_to_file(ignore_list_filename);
+    saveFiles();
     process.exit();
 });
