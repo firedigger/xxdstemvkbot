@@ -63,6 +63,16 @@ function getRandomInt(min, max)
     return Math.floor(Math.random() * (max - min)) + min;
 }
 
+function shuffleString(str) {
+    return str.split('').sort(function(){return 0.5-Math.random()}).join('');
+}
+
+function disableAllPics()
+{
+    intervals.forEach((x) => clearInterval(x));
+    intervals.clear();
+}
+
 function parseYanderesPic(str)
 {
     const reg_str = '<a class="directlink largeimg" href=.*?><span class="directlink-info">';
@@ -76,9 +86,13 @@ function parseYanderesPic(str)
     return result;
 }
 
-function parseRedditPic(str, index)
+function parseRedditPic(str)
 {
-    var parsed_body = JSON.parse(str)['data']['children'][index]['data'];
+    var children = JSON.parse(str)['data']['children'];
+
+    var index = getRandomInt(0, children.length);
+
+    var parsed_body = children[index]['data'];
     var pic = parsed_body['preview']['images'][0]['source']['url'];
     var link = parsed_body['permalink'];
     var title = parsed_body['title'];
@@ -158,27 +172,32 @@ function SendCaptcha(src, callback){
     recognize.solving(data, function(err, id, code)
     {
         return callback(code);
-         })
-    })
+         });
+    });
 });
     
 }
-
-
-//TODO for xxdstem -> add captcha handler
 
 vk.setCaptchaHandler((src,again) => {
     SendCaptcha(src, function(code) { again(code); });
 });
 
+var quiz_data = new Map();
+
+var intervals = new Map();
+
+function checkPrivileges(sender)
+{
+    return admins.indexOf(sender) != -1;
+}
+
 vk.on('message',(msg) =>
 {
-   
-
     var msgtext = "";
     if(msg.text != null)
         msgtext = msg.text;
     var sender = msg.user;
+    var chat_id = msg.chat;
 
     command_queue.forEach(function (elem) {
         if (elem.author == sender)
@@ -206,6 +225,11 @@ vk.on('message',(msg) =>
             return msg.send(message,{fwd:false});
         else
             return msg.send(request_str + message,{fwd:false});
+    }
+
+    function sendMessageWithFwd(message)
+    {
+        return msg.send(message,{fwd:true});
     }
 
     function processContent(contentRetrieval,contentSender, bayanCheck)
@@ -284,6 +308,95 @@ vk.on('message',(msg) =>
         return fwds.map(function (elem) {
             return elem.id;
         }).join(',');
+    }
+
+    function disablePics()
+    {
+        if (intervals.has(chat_id))
+        {
+            clearInterval(intervals.get(chat_id));
+            intervals.delete(chat_id);
+        }
+    }
+
+    function launch_question()
+    {
+        var line = randomArrayElement(quiz_data.get(chat_id).question_base).split('|');
+
+        var question = line[0];
+        quiz_data.get(chat_id).quiz_answer = line[1].trim();
+
+        quiz_data.get(chat_id).quiz_hints = [quiz_data.get(chat_id).quiz_answer.length +' букв','Первая буква ' + quiz_data.get(chat_id).quiz_answer.charAt(0),'Последняя буква ' + quiz_data.get(chat_id).quiz_answer.charAt(quiz_data.get(chat_id).quiz_answer.length - 1), shuffleString(quiz_data.get(chat_id).quiz_answer)];
+        quiz_data.get(chat_id).quiz_msg_counter = 0;
+
+        sendMessage('Новый вопрос викторины:\n' + question,false);
+    }
+
+    function launch_quiz()
+    {
+        quiz_data.set(chat_id,{question_base: String(fs.readFileSync(config.quiz_question_base_filename)).split('\n')});
+        launch_question();
+    }
+
+    function stop_quiz()
+    {
+        quiz_data.get(chat_id).quiz_answer = undefined;
+        quiz_data.get(chat_id).quiz_hints = undefined;
+        quiz_data.get(chat_id).quiz_msg_counter = 0;
+    }
+
+    function announce_winner()
+    {
+        sendMessageWithFwd('Правильный ответ, поздравляем!');
+    }
+
+    function showNextQuizHint()
+    {
+        if (quiz_data.get(chat_id).quiz_hints.length > 0)
+        {
+            sendMessage(quiz_data.get(chat_id).quiz_hints[0], false);
+            quiz_data.get(chat_id).quiz_hints.shift();
+        }
+        else
+        {
+            sendMessage('Пиздец вы дауны лол! Правильный ответ: ' + quiz_data.get(chat_id).quiz_answer, false);
+            quiz_data.get(chat_id).quiz_answer = undefined;
+            setTimeout(launch_question,6*1000);
+        }
+    }
+
+    function check_quiz_answer(message)
+    {
+        if (quiz_data.has(chat_id) && quiz_data.get(chat_id).quiz_answer)
+            if(message == quiz_data.get(chat_id).quiz_answer)
+            {
+                announce_winner();
+                launch_question();
+            }
+            else
+            {
+                quiz_data.get(chat_id).quiz_msg_counter++;
+                if (quiz_data.get(chat_id).quiz_msg_counter > config.quiz_hint_threshold)
+                {
+                    quiz_data.get(chat_id).quiz_msg_counter = 0;
+                    showNextQuizHint();
+                }
+            }
+    }
+
+    check_quiz_answer(msgtext);
+
+    function postRandomPic()
+    {
+        request.get("https://yande.re/post?tags=" + randomArrayElement(defaultYandere), function (err, res, body) {
+            processContent(function () {
+                return randomArrayElement(parseYanderesPic(body));
+            },function (answer) {
+                sendVkPic(answer,"Пикча каждые " + config.picture_period + "минут");
+            },function (answer) {
+                return bayan_checker.add(hashFnv32a(answer));
+            });
+        });
     }
 
     if (msgtext.startsWith('!'))
@@ -420,8 +533,36 @@ vk.on('message',(msg) =>
             sendMessage('Ignored list: ' + ignore_list.showValues(), false);
         }
 
-        if (admins.indexOf(sender) != -1)
+        if (checkPrivileges(sender))
         {
+            if (command == 'enable_pics')
+            {
+                if (intervals.has(chat_id))
+                    sendMessage('Вообще-то модуль уже запущен, еще раз подумай.');
+                else
+                {
+                    sendMessage('Пикча запущена!');
+                    intervals.set(chat_id, setInterval(postRandomPic, config.picture_period * 60 * 1000));
+                    postRandomPic();
+                }
+            }
+
+            if (command == 'disable_pics')
+            {
+                sendMessage('Пикча распущена!');
+                disablePics();
+            }
+
+            if (command == 'launch_quiz')
+            {
+                launch_quiz();
+            }
+
+            if (command == 'stop_quiz')
+            {
+                stop_quiz();
+                sendMessage('Викторина окончена!',false);
+            }
 
             if (command == 'clear_history')
             {
@@ -509,7 +650,9 @@ if (process.platform === "win32") {
         process.emit("SIGINT");
     });
 }
+
 process.on("SIGINT", function () {
+    disableAllPics();
     saveFiles();
     process.exit();
 });
