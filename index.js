@@ -414,7 +414,7 @@ vk.on('message',(msg) =>
             {
                 if (checkMinArgsNumber(args, 1))
                 {
-                    if (!stationary_commands.has(args[0]))
+                    if (!ignore_list.has(args[0]))
                     {
                         ignore_list.add(args[0]);
                         sendMessage('Добавлен игнор ' + args[0], false);
@@ -429,7 +429,7 @@ vk.on('message',(msg) =>
             {
                 if (checkMinArgsNumber(args, 1))
                 {
-                    if (stationary_commands.has(args[0])) {
+                    if (ignore_list.has(args[0])) {
                         ignore_list.delete(args[0]);
                         sendMessage('Удален игнор ' + args[0], false);
                     }
