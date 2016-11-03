@@ -92,11 +92,15 @@ vk.longpoll().then(() =>
     console.log('Longpoll запущен!');
     
 });
+
 var recognize = new Recognize('rucaptcha', {
-    key:'811044668328880db7d3e6a5b5bda38a'
+    key:config.rucaptcha
 });
 
-
+recognize.balanse(function(price)
+{
+    console.log('RuCaptcha Balance:', price);
+});
 function randomArrayElement(arr)
 {
     return arr[getRandomInt(0,arr.length)];
@@ -162,8 +166,9 @@ function SendCaptcha(src, callback){
 
 
 //TODO for xxdstem -> add captcha handler
+
 vk.setCaptchaHandler((src,again) => {
-    SendCaptcha(src, function(code) { //Получили код, нужно чёто делать с капчей });
+    SendCaptcha(src, function(code) { again(code); });
 });
 
 vk.on('message',(msg) =>
