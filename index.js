@@ -392,7 +392,7 @@ vk.on('message',(msg) =>
             processContent(function () {
                 return randomArrayElement(parseYanderesPic(body));
             },function (answer) {
-                sendVkPic(answer,"Пикча каждые " + config.picture_period + "минут");
+                sendVkPic(answer,"Пикча каждые " + config.picture_period + " минут");
             },function (answer) {
                 return bayan_checker.add(hashFnv32a(answer));
             });
