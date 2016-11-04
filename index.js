@@ -376,7 +376,7 @@ vk.on('message',(msg) =>
     function check_quiz_answer(message)
     {
         if (quiz_data.has(chat_id) && quiz_data.get(chat_id).quiz_answer)
-            if(message.toLowerCase() == quiz_data.get(chat_id).quiz_answer.toLowerCase())
+            if(message.toLowerCase().indexOf(quiz_data.get(chat_id).quiz_answer.toLowerCase()) != -1)
             {
                 announce_winner();
                 setTimeout(launch_question,4000);
