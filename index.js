@@ -327,22 +327,36 @@ vk.on('message',(msg) =>
         }
     }
 
+    function initQuizLeaderBoard()
+    {
+        quiz_data.get(chat_id).leaderboard = new Map();
+        vk.api.messages.getChatUsers({chat_id:chat_id,fields:'nickname'}).then(function (data)
+            {
+                data.forEach(function (elem)
+                {
+                    quiz_data.get(chat_id).leaderboard.set(elem.id,{fullname:elem.first_name + ' ' + elem.last_name,points:0});
+                });
+            });
+    }
+
     function launch_question()
     {
         var line = randomArrayElement(quiz_data.get(chat_id).question_base).split('|');
 
         var question = line[0];
         quiz_data.get(chat_id).quiz_answer = line[1].trim();
+        quiz_data.get(chat_id).question = line[0];
 
-        quiz_data.get(chat_id).quiz_hints = [quiz_data.get(chat_id).quiz_answer.length +' букв','Первая буква ' + quiz_data.get(chat_id).quiz_answer.charAt(0),'Последняя буква ' + quiz_data.get(chat_id).quiz_answer.charAt(quiz_data.get(chat_id).quiz_answer.length - 1), shuffleString(quiz_data.get(chat_id).quiz_answer)];
+        quiz_data.get(chat_id).quiz_hints = ['Первая буква ' + quiz_data.get(chat_id).quiz_answer.charAt(0),'Последняя буква ' + quiz_data.get(chat_id).quiz_answer.charAt(quiz_data.get(chat_id).quiz_answer.length - 1), shuffleString(quiz_data.get(chat_id).quiz_answer)];
         quiz_data.get(chat_id).quiz_msg_counter = 0;
 
-        sendMessage('Новый вопрос викторины:\n' + question,false);
+        sendMessage('Новый вопрос викторины:\n' + question + '\n' + quiz_data.get(chat_id).quiz_answer.length +' букв',false);
     }
 
     function launch_quiz()
     {
         quiz_data.set(chat_id,{question_base: String(fs.readFileSync(config.quiz_question_base_filename)).split('\n')});
+        initQuizLeaderBoard();
         launch_question();
     }
 
@@ -356,6 +370,16 @@ vk.on('message',(msg) =>
     function announce_winner()
     {
         sendMessageWithFwd('Правильный ответ, поздравляем!');
+        quiz_data.get(chat_id).leaderboard.get(sender).points++;
+        var scores = 'Текущий счет:\n';
+        Array.from(quiz_data.get(chat_id).leaderboard.values()).filter((x) => x.points > 0).sort(function (a, b) {
+            return a.points - b.points;
+        }).forEach((value) => scores+=value.fullname + ' ' + value.points + '\n');
+        scores+='Остальные долбаебы';
+        setTimeout(function () {
+            sendMessage(scores,false);
+        },1500);
+
     }
 
     function showNextQuizHint()
@@ -378,8 +402,9 @@ vk.on('message',(msg) =>
         if (quiz_data.has(chat_id) && quiz_data.get(chat_id).quiz_answer)
             if(message.toLowerCase().indexOf(quiz_data.get(chat_id).quiz_answer.toLowerCase()) != -1)
             {
+                stop_quiz();
                 announce_winner();
-                setTimeout(launch_question,4000);
+                setTimeout(launch_question,4 * 1000);
             }
             else
             {
@@ -392,7 +417,7 @@ vk.on('message',(msg) =>
             }
     }
 
-    check_quiz_answer(msgtext);
+
 
     function postRandomPic()
     {
@@ -541,6 +566,18 @@ vk.on('message',(msg) =>
             sendMessage('Ignored list: ' + ignore_list.showValues(), false);
         }
 
+        if (command == 'question')
+        {
+            if (quiz_data.get(chat_id).quiz_answer)
+            {
+                sendMessage('Текущий вопрос\n: ' + quiz_data.get(chat_id).question, false);
+            }
+            else
+            {
+                sendMessage('Викторина неактивна', true);
+            }
+        }
+
         if (checkPrivileges(sender))
         {
             if (command == 'enable_pics')
@@ -574,6 +611,7 @@ vk.on('message',(msg) =>
 			
 			if (command == 'hint')
             {
+                quiz_data.get(chat_id).quiz_msg_counter = 0;
                 showNextQuizHint();
             }
 
@@ -649,9 +687,9 @@ vk.on('message',(msg) =>
                 }
             }
         }
-         check_stationary_command(command);
-
+        check_stationary_command(command);
     }
+    check_quiz_answer(msgtext);
 });
 
 if (process.platform === "win32") {
