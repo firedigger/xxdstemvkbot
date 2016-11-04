@@ -471,7 +471,7 @@ vk.on('message',(msg) =>
 
                                 args[0] = titles[i];
 
-                                request_str += 'fixed to ' + args[0] + '\n';
+                                request_str += 'fixed to ' + decodeURIComponent(args[0]) + '\n';
 
                                 request.get("https://yande.re/post?tags=" + args[0], function (err, res, body) {
                                     processYandereRequest(body);
@@ -534,7 +534,7 @@ vk.on('message',(msg) =>
             });
         }
 
-        check_stationary_command(command);
+       
 
         if (command == 'ignore_list')
         {
@@ -644,6 +644,7 @@ vk.on('message',(msg) =>
                 }
             }
         }
+         check_stationary_command(command);
 
     }
 });
