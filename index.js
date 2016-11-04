@@ -171,7 +171,7 @@ function SendCaptcha(src, callback){
  fs.readFile('./captcha.png', function(err, data){
     recognize.solving(data, function(err, id, code)
     {
-        return callback(code);
+        return callback(code,id);
          });
     });
 });
@@ -179,7 +179,15 @@ function SendCaptcha(src, callback){
 }
 
 vk.setCaptchaHandler((src,again) => {
-    SendCaptcha(src, function(code) { again(code); });
+    SendCaptcha(src, function(code,id) { 
+        again(code)
+        .catch(() => {
+            recognize.report(id,function(err, answer)
+        	{     	
+            console.log("report captcha!");
+                });
+        });                         
+    });
 });
 
 var quiz_data = new Map();
@@ -463,7 +471,7 @@ vk.on('message',(msg) =>
 
                                 args[0] = titles[i];
 
-                                request_str += 'fixed to ' + args[0] + '\n';
+                                request_str += 'fixed to ' + decodeURIComponent(args[0]) + '\n';
 
                                 request.get("https://yande.re/post?tags=" + args[0], function (err, res, body) {
                                     processYandereRequest(body);
@@ -526,7 +534,7 @@ vk.on('message',(msg) =>
             });
         }
 
-        check_stationary_command(command);
+       
 
         if (command == 'ignore_list')
         {
@@ -641,6 +649,7 @@ vk.on('message',(msg) =>
                 }
             }
         }
+         check_stationary_command(command);
 
     }
 });
