@@ -371,7 +371,7 @@ vk.on('message',(msg) =>
             if(message == quiz_data.get(chat_id).quiz_answer)
             {
                 announce_winner();
-                launch_question();
+                setTimeout(launch_question,4000);
             }
             else
             {
@@ -562,6 +562,11 @@ vk.on('message',(msg) =>
             {
                 stop_quiz();
                 sendMessage('Викторина окончена!',false);
+            }
+			
+			if (command == 'hint')
+            {
+                showNextQuizHint();
             }
 
             if (command == 'clear_history')
