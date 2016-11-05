@@ -578,13 +578,17 @@ vk.on('message',(msg) =>
 
         if (command == 'question')
         {
-            if (quiz_data.get(chat_id).quiz_answer)
+            if (checkQuiz())
             {
                 sendMessage('Текущий вопрос:\n' + quiz_data.get(chat_id).question, false);
             }
-            else
+        }
+
+        if (command == 'scores')
+        {
+            if (checkQuiz())
             {
-                sendMessage('Викторина неактивна', true);
+                printLeaderBoard();
             }
         }
 
