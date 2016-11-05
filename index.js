@@ -343,9 +343,9 @@ vk.on('message',(msg) =>
     {
         var line = randomArrayElement(quiz_data.get(chat_id).question_base).split('|');
 
-        var question = line[0];
+        var question = line[0] + '\n' + quiz_data.get(chat_id).quiz_answer.length +' букв';
         quiz_data.get(chat_id).quiz_answer = line[1].trim();
-        quiz_data.get(chat_id).question = line[0] + '\n' + quiz_data.get(chat_id).quiz_answer.length +' букв';
+        quiz_data.get(chat_id).question = line[0];
 
         quiz_data.get(chat_id).quiz_hints = ['Первая буква ' + quiz_data.get(chat_id).quiz_answer.charAt(0),'Последняя буква ' + quiz_data.get(chat_id).quiz_answer.charAt(quiz_data.get(chat_id).quiz_answer.length - 1), shuffleString(quiz_data.get(chat_id).quiz_answer)];
         quiz_data.get(chat_id).quiz_msg_counter = 0;
