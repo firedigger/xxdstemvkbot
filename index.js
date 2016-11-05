@@ -441,6 +441,17 @@ vk.on('message',(msg) =>
             });
         });
     }
+	
+	function checkQuiz()
+            {
+                if (quiz_data.has(chat_id) && quiz_data.get(chat_id).quiz_answer)
+                    return true;
+                else
+                {
+                    sendMessage('Викторина не запущена!',true);
+                    return false;
+                }
+            }
 
     if (msgtext.startsWith('!'))
     {
@@ -621,17 +632,6 @@ vk.on('message',(msg) =>
             {
                 stop_quiz();
                 sendMessage('Викторина окончена!',false);
-            }
-
-            function checkQuiz()
-            {
-                if (quiz_data.has(chat_id) && quiz_data.get(chat_id).quiz_answer)
-                    return true;
-                else
-                {
-                    sendMessage('Викторина не запущена!',true);
-                    return false;
-                }
             }
 
 			if (command == 'hint')
