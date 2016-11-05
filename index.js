@@ -365,21 +365,24 @@ vk.on('message',(msg) =>
         quiz_data.get(chat_id).quiz_answer = undefined;
         quiz_data.get(chat_id).quiz_hints = undefined;
         quiz_data.get(chat_id).quiz_msg_counter = 0;
+        printLeaderBoard();
+    }
+
+    function printLeaderBoard()
+    {
+        var scores = 'Текущий счет:\n';
+        Array.from(quiz_data.get(chat_id).leaderboard.values()).filter((x) => x.points > 0).sort(function (a, b) {
+            return -(a.points - b.points);
+        }).forEach((value) => scores+=value.fullname + ' ' + value.points + '\n');
+        scores+='Остальные долбаебы';
+        sendMessage(scores,false);
     }
 
     function announce_winner()
     {
         sendMessageWithFwd('Правильный ответ, поздравляем!');
         quiz_data.get(chat_id).leaderboard.get(sender).points++;
-        var scores = 'Текущий счет:\n';
-        Array.from(quiz_data.get(chat_id).leaderboard.values()).filter((x) => x.points > 0).sort(function (a, b) {
-            return -(a.points - b.points);
-        }).forEach((value) => scores+=value.fullname + ' ' + value.points + '\n');
-        scores+='Остальные долбаебы';
-        setTimeout(function () {
-            sendMessage(scores,false);
-        },1500);
-
+        printLeaderBoard();
     }
 
     function showNextQuizHint()
@@ -611,7 +614,7 @@ vk.on('message',(msg) =>
 
             function checkQuiz()
             {
-                if (quiz_data.get(chat_id).quiz_answer)
+                if (quiz_data.has(chat_id) && quiz_data.get(chat_id).quiz_answer)
                     return true;
                 else
                 {
