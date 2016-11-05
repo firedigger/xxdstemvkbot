@@ -345,12 +345,12 @@ vk.on('message',(msg) =>
 
         var question = line[0];
         quiz_data.get(chat_id).quiz_answer = line[1].trim();
-        quiz_data.get(chat_id).question = line[0];
+        quiz_data.get(chat_id).question = line[0] + '\n' + quiz_data.get(chat_id).quiz_answer.length +' букв';
 
         quiz_data.get(chat_id).quiz_hints = ['Первая буква ' + quiz_data.get(chat_id).quiz_answer.charAt(0),'Последняя буква ' + quiz_data.get(chat_id).quiz_answer.charAt(quiz_data.get(chat_id).quiz_answer.length - 1), shuffleString(quiz_data.get(chat_id).quiz_answer)];
         quiz_data.get(chat_id).quiz_msg_counter = 0;
 
-        sendMessage('Новый вопрос викторины:\n' + question + '\n' + quiz_data.get(chat_id).quiz_answer.length +' букв',false);
+        sendMessage('Новый вопрос викторины:\n' + question,false);
     }
 
     function launch_quiz()
@@ -373,7 +373,7 @@ vk.on('message',(msg) =>
         quiz_data.get(chat_id).leaderboard.get(sender).points++;
         var scores = 'Текущий счет:\n';
         Array.from(quiz_data.get(chat_id).leaderboard.values()).filter((x) => x.points > 0).sort(function (a, b) {
-            return a.points - b.points;
+            return -(a.points - b.points);
         }).forEach((value) => scores+=value.fullname + ' ' + value.points + '\n');
         scores+='Остальные долбаебы';
         setTimeout(function () {
@@ -570,7 +570,7 @@ vk.on('message',(msg) =>
         {
             if (quiz_data.get(chat_id).quiz_answer)
             {
-                sendMessage('Текущий вопрос\n: ' + quiz_data.get(chat_id).question, false);
+                sendMessage('Текущий вопрос:\n' + quiz_data.get(chat_id).question, false);
             }
             else
             {
@@ -608,11 +608,32 @@ vk.on('message',(msg) =>
                 stop_quiz();
                 sendMessage('Викторина окончена!',false);
             }
-			
+
+            function checkQuiz()
+            {
+                if (quiz_data.get(chat_id).quiz_answer)
+                    return true;
+                else
+                {
+                    sendMessage('Викторина не запущена!',true);
+                    return false;
+                }
+            }
+
 			if (command == 'hint')
             {
-                quiz_data.get(chat_id).quiz_msg_counter = 0;
-                showNextQuizHint();
+                if (checkQuiz()) {
+                    quiz_data.get(chat_id).quiz_msg_counter = 0;
+                    showNextQuizHint();
+                }
+            }
+            if (command == 'skip')
+            {
+                if (checkQuiz())
+                {
+                    quiz_data.get(chat_id).quiz_hints = [];
+                    showNextQuizHint();
+                }
             }
 
             if (command == 'clear_history')
