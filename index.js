@@ -343,8 +343,8 @@ vk.on('message',(msg) =>
     {
         var line = randomArrayElement(quiz_data.get(chat_id).question_base).split('|');
 
-        var question = line[0] + '\n' + quiz_data.get(chat_id).quiz_answer.length +' букв';
         quiz_data.get(chat_id).quiz_answer = line[1].trim();
+        var question = line[0] + '\n' + quiz_data.get(chat_id).quiz_answer.length +' букв';
         quiz_data.get(chat_id).question = line[0];
 
         quiz_data.get(chat_id).quiz_hints = ['Первая буква ' + quiz_data.get(chat_id).quiz_answer.charAt(0),'Последняя буква ' + quiz_data.get(chat_id).quiz_answer.charAt(quiz_data.get(chat_id).quiz_answer.length - 1), shuffleString(quiz_data.get(chat_id).quiz_answer)];
@@ -360,11 +360,17 @@ vk.on('message',(msg) =>
         launch_question();
     }
 
-    function stop_quiz()
+    function stop_question()
     {
         quiz_data.get(chat_id).quiz_answer = undefined;
         quiz_data.get(chat_id).quiz_hints = undefined;
         quiz_data.get(chat_id).quiz_msg_counter = 0;
+
+    }
+
+    function stop_quiz()
+    {
+        stop_question();
         printLeaderBoard();
     }
 
@@ -389,8 +395,9 @@ vk.on('message',(msg) =>
     {
         if (quiz_data.get(chat_id).quiz_hints.length > 0)
         {
-            sendMessage(quiz_data.get(chat_id).quiz_hints[0], false);
+            var hint = quiz_data.get(chat_id).quiz_hints[0];
             quiz_data.get(chat_id).quiz_hints.shift();
+            sendMessage(hint, false);
         }
         else
         {
@@ -405,7 +412,7 @@ vk.on('message',(msg) =>
         if (quiz_data.has(chat_id) && quiz_data.get(chat_id).quiz_answer)
             if(message.toLowerCase().indexOf(quiz_data.get(chat_id).quiz_answer.toLowerCase()) != -1)
             {
-                stop_quiz();
+                stop_question();
                 announce_winner();
                 setTimeout(launch_question,4 * 1000);
             }
