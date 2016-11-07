@@ -4,15 +4,20 @@ const vk = new (require('vk-io'));
 const SerializableMap = require('./SerializableMap');
 const SerializableSet = require('./SerializableSet');
 const Recognize = require('recognize');
+const RoleManager = require('./RoleMaganer');
+const FlagCooldowner = require('./FlagCooldowner');
 const config = JSON.parse(fs.readFileSync('config.json'));
 
 const commands_filename = config.commands_filename;
 const bayan_filename = config.bayan_filename;
 const ignore_list_filename = config.ignore_list_filename;
+const roles_filename = config.roles_filename;
 
 var stationary_commands = new SerializableMap();
 var bayan_checker = new SerializableSet();
 var ignore_list = new SerializableSet();
+var roles = new RoleManager();
+var cooldown = new FlagCooldowner(config.period);
 
 function hashFnv32a(str, asString, seed)
 {
@@ -48,12 +53,12 @@ function initializeStructure(structure,filename, initializerList)
 initializeStructure(stationary_commands, commands_filename);
 initializeStructure(bayan_checker, bayan_filename);
 initializeStructure(ignore_list, ignore_list_filename);
+initializeStructure(roles, roles_filename, config.admins);
 
 const defaultSubreddit = config.defaultSubreddits;
 const defaultYandere = config.defaultYandere;
 
 const dicker_photos = ["photo9680305_360353548","photo9680305_373629840","photo9680305_356010821","photo9680305_340526271","photo9680305_324159352","photo9680305_248221743","photo297755100_438730139"];
-const admins = config.admins;
 const max_bayan_counter = 10;
 
 var command_queue = [];
@@ -92,9 +97,13 @@ function parseRedditPic(str)
 
     var index = getRandomInt(0, children.length);
 
+    var pic = undefined;
     var parsed_body = children[index]['data'];
-    var pic = parsed_body['preview']['images'][0]['source']['url'];
-    var link = parsed_body['permalink'];
+    if (parsed_body['preview']['images'])
+    {
+        pic = parsed_body['preview']['images'][0]['source']['url'];
+        var link = parsed_body['permalink'];
+    }
     var title = parsed_body['title'];
     return {pic:pic,link:link,title:title};
 }
@@ -194,9 +203,22 @@ var quiz_data = new Map();
 
 var intervals = new Map();
 
-function checkPrivileges(sender)
+function formatVkPhotoString(id, owner_id, access_key)
 {
-    return admins.indexOf(sender) != -1;
+    return owner_id+"_"+id + (access_key ? ('_'+access_key) : '');
+}
+
+function pickLargestVkPhotoLink(photo)
+{
+    var links = [photo.photo_75, photo.photo_130, photo.photo_604, photo.photo_807, photo.photo_1280, photo.photo_2560];
+    var i = links.length - 1;
+    while(!links[i])
+        --i;
+
+    if (i < 0)
+        throw new Error('No pic links available');
+
+    return links[i];
 }
 
 vk.on('message',(msg) =>
@@ -211,7 +233,7 @@ vk.on('message',(msg) =>
         if (elem.author == sender)
         {
             sendMessage('Команда ' + elem.key + (stationary_commands.has(elem.key) ? ' изменена!' : ' добавлена!'), false);
-            stationary_commands.add(elem.key, {message:msgtext, forward_messages:msg.id});
+            stationary_commands.add(elem.key, {forward_messages:msg.id});
             elem.key = '';
         }
     });
@@ -222,7 +244,7 @@ vk.on('message',(msg) =>
         vk.upload.message({
             file: picLink
         }).then(function(data) {
-            var pik_id = data['owner_id']+"_"+data['id'];
+            var pik_id = formatVkPhotoString(data['id'],data['owner_id']);
             return msg.send(message,{ attach: "photo"+pik_id, fwd:false});
         });
     }
@@ -260,7 +282,7 @@ vk.on('message',(msg) =>
         }
         catch (err)
         {
-            sendMessage("хуйня какая-та!");
+            sendMessage("хуйня какая-та!" + '\n' + err.message);
         }
     }
 
@@ -289,6 +311,25 @@ vk.on('message',(msg) =>
                 sendMessageObject(value);
             }
         });
+    }
+
+    function checkAdminPrivileges(sender)
+    {
+        if (roles.checkPrivileges(sender,2))
+            return true;
+        sendMessage('Недостаточно прав!');
+    }
+
+    function checkModeratorPrivileges(sender)
+    {
+        if (roles.checkPrivileges(sender,1))
+            return true;
+        sendMessage('Недостаточно прав!');
+    }
+
+    function checkUserPrivileges(sender)
+    {
+        return roles.checkPrivileges(sender,0);
     }
 
     function checkIgnore(arg)
@@ -427,8 +468,6 @@ vk.on('message',(msg) =>
             }
     }
 
-
-
     function postRandomPic()
     {
         request.get("https://yande.re/post?tags=" + randomArrayElement(defaultYandere), function (err, res, body) {
@@ -453,12 +492,20 @@ vk.on('message',(msg) =>
                 }
             }
 
-    if (msgtext.startsWith('!'))
+    if (msgtext.startsWith('!') && checkUserPrivileges(sender))
     {
         var words = msgtext.split(' ');
-        var command = words[0].slice(1).toLowerCase();
+        var command = words[0].slice(1);
         var args = words.slice(1);
         var request_str = generateRequestString(msg);
+
+        if (!checkModeratorPrivileges(sender))
+        {
+            if (cooldown.check())
+                return;
+        }
+        cooldown.trigger();
+
         if (command == 'yan')
         {
             if (args.length == 0)
@@ -546,7 +593,10 @@ vk.on('message',(msg) =>
                     processContent(function () {
                         return parseRedditPic(body,getRandomInt(0,25));
                     },function (answer) {
-                        sendVkPic(answer.pic,request_str + answer.title + '\n' + "https://www.reddit.com"+answer.link);
+                        if (answer.pic)
+                            sendVkPic(answer.pic,request_str + answer.title + '\n' + "https://www.reddit.com"+answer.link);
+                        else
+                            sendMessage(request_str + answer.title + '\n' + "https://www.reddit.com"+answer.link);
                     },function (answer) {
                         return bayan_checker.add(hashFnv32a(answer.pic));
                     });
@@ -580,8 +630,6 @@ vk.on('message',(msg) =>
             });
         }
 
-       
-
         if (command == 'ignore_list')
         {
             sendMessage('Ignored list: ' + ignore_list.showValues(), false);
@@ -603,8 +651,34 @@ vk.on('message',(msg) =>
             }
         }
 
-        if (checkPrivileges(sender))
+        if (command == 'commands')
         {
+            sendMessage('Доступные команды:\n' + stationary_commands.showKeys('\n'), false);
+        }
+
+        if (command == 'help')
+        {
+            sendMessage(config.help, false);
+        }
+
+        if (checkAdminPrivileges(sender))
+        {
+            if (command == 'op')
+            {
+                if (checkMinArgsNumber(args,1))
+                {
+                    sendMessage(args[0] + ' теперь имеет права ' + roles.op(args[0]));
+                }
+            }
+
+            if (command == 'deop')
+            {
+                if (checkMinArgsNumber(args,1))
+                {
+                    sendMessage(args[0] + ' теперь имеет права ' + roles.deop(args[0]));
+                }
+            }
+
             if (command == 'enable_pics')
             {
                 if (intervals.has(chat_id))
@@ -682,6 +756,31 @@ vk.on('message',(msg) =>
                     }
                     else
                         sendMessage(args[0] +' нет в списке игнора!');
+                }
+            }
+
+            if (command == 'addpic')
+            {
+                if (checkMinArgsNumber(args,1)) {
+
+                    var id = msg.id;
+
+                    var com = {message: (args[1] ? args.slice(1).join(' ') : ''), attach: []};
+
+                    vk.api.messages.getById({message_ids: msg.id}).then(function (data) {
+                        data.items[0].attachments.forEach(function (attachment) {
+                            var photo = attachment.photo;
+                            //var str = 'photo'+formatVkPhotoString(photo.id,photo.owner_id,photo.access_key);
+                            vk.upload.message({
+                                file: pickLargestVkPhotoLink(photo)
+                            }).then(function (data) {
+                                var pik_id = formatVkPhotoString(data['id'], data['owner_id']);
+                                com.attach.push('photo' + pik_id);
+                            });
+                            sendMessage('Команда ' + args[0] + (stationary_commands.has(args[0]) ? ' изменена!' : ' добавлена!'), false);
+                        });
+                    });
+                    stationary_commands.add(args[0], com);
                 }
             }
 

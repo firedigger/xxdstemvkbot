@@ -57,5 +57,24 @@ SerializableMap.prototype.forEach = function (callback)
     this.commands.forEach(callback);
 };
 
+SerializableMap.prototype.showValues = function (sep) {
+    if (!sep)
+        sep = ',';
+    var result = '';
+    this.forEach(function (value,key) {
+        result+=value+sep;
+    });
+    return result.slice(0,-sep.length);
+};
+
+SerializableMap.prototype.showKeys = function (sep) {
+    if (!sep)
+        sep = ',';
+    var result = '';
+    this.forEach(function (value,key) {
+        result+=key+sep;
+    });
+    return result.slice(0,-sep.length);
+};
 
 module.exports = SerializableMap;
