@@ -17,7 +17,7 @@ var stationary_commands = new SerializableMap();
 var bayan_checker = new SerializableSet();
 var ignore_list = new SerializableSet();
 var roles = new RoleManager();
-var cooldown = new FlagCooldowner(config.period);
+var cooldown = new FlagCooldowner(config.cooldown);
 
 function hashFnv32a(str, asString, seed)
 {
@@ -99,7 +99,7 @@ function parseRedditPic(str)
 
     var pic = undefined;
     var parsed_body = children[index]['data'];
-    if (parsed_body['preview']['images'])
+    if (parsed_body['preview'] && parsed_body['preview']['images'])
     {
         pic = parsed_body['preview']['images'][0]['source']['url'];
         var link = parsed_body['permalink'];
@@ -334,7 +334,7 @@ vk.on('message',(msg) =>
 
     function checkIgnore(arg)
     {
-        if (ignore_list.has(arg) && admins.indexOf(sender) == -1)
+        if (ignore_list.has(arg) && !checkAdminPrivileges(sender))
             sendMessage("Эта хуйня в игноре!");
         else
             return true;
@@ -598,7 +598,7 @@ vk.on('message',(msg) =>
                         else
                             sendMessage(request_str + answer.title + '\n' + "https://www.reddit.com"+answer.link);
                     },function (answer) {
-                        return bayan_checker.add(hashFnv32a(answer.pic));
+                        return bayan_checker.add(hashFnv32a(answer.link));
                     });
                 });
             }
