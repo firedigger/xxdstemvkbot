@@ -661,6 +661,34 @@ vk.on('message',(msg) =>
             sendMessage(config.help, false);
         }
 
+        if(checkModeratorPrivileges(sender)) 
+        {    
+            if (command == 'launch_quiz')
+            {
+                launch_quiz();
+            }
+
+            if (command == 'stop_quiz')
+            {
+                stop_quiz();
+                sendMessage('Викторина окончена!',false);
+            }
+            if (command == 'hint')
+            {
+                if (checkQuiz()) {
+                    quiz_data.get(chat_id).quiz_msg_counter = 0;
+                    showNextQuizHint();
+                }
+            }
+            if (command == 'skip')
+            {
+                if (checkQuiz())
+                {
+                    quiz_data.get(chat_id).quiz_hints = [];
+                    showNextQuizHint();
+                }
+            }
+        }
         if (checkAdminPrivileges(sender))
         {
             if (command == 'op')
@@ -696,33 +724,9 @@ vk.on('message',(msg) =>
                 sendMessage('Пикча распущена!');
                 disablePics();
             }
+            
+            
 
-            if (command == 'launch_quiz')
-            {
-                launch_quiz();
-            }
-
-            if (command == 'stop_quiz')
-            {
-                stop_quiz();
-                sendMessage('Викторина окончена!',false);
-            }
-
-			if (command == 'hint')
-            {
-                if (checkQuiz()) {
-                    quiz_data.get(chat_id).quiz_msg_counter = 0;
-                    showNextQuizHint();
-                }
-            }
-            if (command == 'skip')
-            {
-                if (checkQuiz())
-                {
-                    quiz_data.get(chat_id).quiz_hints = [];
-                    showNextQuizHint();
-                }
-            }
 
             if (command == 'clear_history')
             {
