@@ -355,6 +355,16 @@ vk.on('message',(msg) =>
             sendMessage('Недостаточно прав! Вы лох!');
         return false;
     }
+    
+       function getPrivilegesName(level)
+    {
+       switch(level) {
+           case 0: return "Пользователь";
+           case 1: return "Модератор";
+           case 2: return "Администратор";
+           default: return "Лох";
+               }
+    }
 
     function checkIgnore(arg)
     {
@@ -811,11 +821,11 @@ vk.on('message',(msg) =>
         {
             if (args.length > 0)
             {
-                sendMessage('Уровень доступа ' + args[0] + ' = ' + roles.getPrivileges(args[0]))
+                sendMessage('Уровень доступа ' + args[0] + ': ' + getPrivilegesName(roles.getPrivileges(args[0])))
             }
             else
             {
-                sendMessage('Уровень доступа ' + sender + ' = ' + roles.getPrivileges(sender))
+                sendMessage('Ваш уровень доступа: ' + getPrivilegesName(roles.getPrivileges(sender)))
             }
         }
     }
