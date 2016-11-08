@@ -317,14 +317,14 @@ vk.on('message',(msg) =>
     {
         if (roles.checkPrivileges(sender,2))
             return true;
-        sendMessage('Недостаточно прав!');
+        //sendMessage('Недостаточно прав!');
     }
 
     function checkModeratorPrivileges(sender)
     {
         if (roles.checkPrivileges(sender,1))
             return true;
-        sendMessage('Недостаточно прав!');
+        //sendMessage('Недостаточно прав!');
     }
 
     function checkUserPrivileges(sender)
