@@ -1,6 +1,6 @@
 const SerializableMap = require('./SerializableMap');
 
-function RoleManager(admins)
+function RoleManager()
 {
     this.Privileges = new SerializableMap();
 }
@@ -16,7 +16,7 @@ RoleManager.prototype.initializeFromArray = function (admins)
 
 RoleManager.prototype.checkNullPrivilege = function (id)
 {
-    if (!this.Privileges.has(id))
+    if (!this.Privileges.has(id+''))
         this.setPrivileges(id,0);
 };
 
@@ -28,13 +28,13 @@ RoleManager.prototype.checkPrivileges = function (id, level)
 
 RoleManager.prototype.setPrivileges = function (id, level)
 {
-    return this.Privileges.add(id,level);
+    return this.Privileges.add(id+'',level);
 };
 
 RoleManager.prototype.getPrivileges = function (id)
 {
     this.checkNullPrivilege(id);
-    return this.Privileges.get(id);
+    return this.Privileges.get(id+'');
 };
 
 RoleManager.prototype.op = function (id)

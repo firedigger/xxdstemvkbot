@@ -161,6 +161,7 @@ function saveFiles()
 {
     stationary_commands.save_to_file(commands_filename);
     bayan_checker.save_to_file(bayan_filename);
+    roles.save_to_file(roles_filename);
     ignore_list.save_to_file(ignore_list_filename);
 }
 
@@ -313,23 +314,46 @@ vk.on('message',(msg) =>
         });
     }
 
-    function checkAdminPrivileges(sender)
-    {
-        if (roles.checkPrivileges(sender,2))
-            return true;
-        //sendMessage('Недостаточно прав!');
-    }
-
-    function checkModeratorPrivileges(sender)
-    {
-        if (roles.checkPrivileges(sender,1))
-            return true;
-        //sendMessage('Недостаточно прав!');
-    }
-
-    function checkUserPrivileges(sender)
+    function isUser(sender)
     {
         return roles.checkPrivileges(sender,0);
+    }
+
+    function isModerator(sender)
+    {
+        return roles.checkPrivileges(sender,1);
+    }
+
+    function isAdmin(sender)
+    {
+        return roles.checkPrivileges(sender,2);
+    }
+
+    function checkAdminPrivileges(sender, warning)
+    {
+        if (isModerator(sender))
+            return true;
+        if (warning)
+            sendMessage('Недостаточно прав! Необходимы права администратора');
+        return false;
+    }
+
+    function checkModeratorPrivileges(sender, warning)
+    {
+        if (isAdmin(sender))
+            return true;
+        if (warning)
+            sendMessage('Недостаточно прав! Необходимы права модератора');
+        return false;
+    }
+
+    function checkUserPrivileges(sender, warning)
+    {
+        if (isUser(sender))
+            return true;
+        if (warning)
+            sendMessage('Недостаточно прав! Вы лох!');
+        return false;
     }
 
     function checkIgnore(arg)
@@ -470,7 +494,8 @@ vk.on('message',(msg) =>
 
     function postRandomPic()
     {
-        request.get("https://yande.re/post?tags=" + randomArrayElement(defaultYandere), function (err, res, body) {
+        request.get("https://yande.re/post?tags=" + randomArrayElement(defaultYandere), function (err, res, body)
+        {
             processContent(function () {
                 return randomArrayElement(parseYanderesPic(body));
             },function (answer) {
@@ -492,340 +517,307 @@ vk.on('message',(msg) =>
                 }
             }
 
-    if (msgtext.startsWith('!') && checkUserPrivileges(sender))
+    if (msgtext.startsWith('!'))
     {
         var words = msgtext.split(' ');
         var command = words[0].slice(1);
         var args = words.slice(1);
         var request_str = generateRequestString(msg);
 
-        if (!checkModeratorPrivileges(sender))
+        if (checkUserPrivileges(sender))
         {
-            if (cooldown.check())
-                return;
-        }
-        cooldown.trigger();
 
-        if (command == 'yan')
-        {
-            if (args.length == 0)
-            {
-                args = [randomArrayElement(defaultYandere)];
-                request_str += 'fixed to ' + args[0] + '\n';
+            if (!checkModeratorPrivileges(sender)) {
+                if (cooldown.check())
+                    return;
             }
-            if (checkIgnore(args[0])) {
-                if (args[0] == 'digger' || args[0] == 'dicker_photos' || args[0] == 'диккер') {
-                    msg.send("ееее диккер!",{ attach: randomArrayElement(dicker_photos), fwd:false});
+            cooldown.trigger();
+
+            if (command == 'yan') {
+                if (args.length == 0) {
+                    args = [randomArrayElement(defaultYandere)];
+                    request_str += 'fixed to ' + args[0] + '\n';
                 }
-                else {
-                    request.get("https://yande.re/post?tags=" + args[0], function (err, res, body) {
-                        if (body.indexOf('Nobody here but us chickens!') != -1) {
-                            request.get("https://yande.re/tag?name=" + args[0] + "&type=&order=count", function (err, res, body) {
-                                //console.log(body);
-                                var elem_exp = /<td align="right">[^]*?>\?<\/a>/g;
-
-                                var count_exp = '<td align="right">.*?</td>';
-                                var title_exp = /title=.*?>/i;
-
-                                var matches = body.match(elem_exp);
-
-                                //console.log(matches);
-
-                                var counts = [];
-                                var sum = 0;
-                                var titles = [];
-
-                                if (!matches) {
-                                    sendMessage('No matches found!');
-                                    return;
-                                }
-
-                                matches.forEach(function (elem) {
-                                    //console.log(elem);
-                                    var count = (+elem.match(new RegExp(count_exp)).toString().slice(6, -2));
-                                    var title = elem.match(new RegExp(title_exp)).toString().slice(6, -2);
-
-                                    counts.push(count);
-                                    titles.push(title);
-                                    sum += count;
-
-                                });
-
-                                //console.log(titles);
-
-                                var v = getRandomInt(0, sum);
-
-                                var c = 0;
-                                var i = 0;
-                                while (c < v) {
-                                    c += counts[i];
-                                    i++;
-                                }
-
-                                args[0] = titles[i];
-
-                                request_str += 'fixed to ' + decodeURIComponent(args[0]) + '\n';
-
-                                request.get("https://yande.re/post?tags=" + args[0], function (err, res, body) {
-                                    processYandereRequest(body);
-                                });
-                            });
-                        }
-                        else {
-                            processYandereRequest(body);
-                        }
-                    });
-                }
-            }
-        }
-
-        if (command == 'pic' || command == 'пик')
-        {
-            if (args.length == 0)
-            {
-                args = [randomArrayElement(defaultSubreddit)];
-                request_str += 'fixed to ' + args[0] + '\n';
-            }
-            if (checkIgnore(args[0]))
-            {
-                request.get("https://www.reddit.com/r/"+args[0]+"/new/.json", function(err,res,body)
-                {
-                    processContent(function () {
-                        return parseRedditPic(body,getRandomInt(0,25));
-                    },function (answer) {
-                        if (answer.pic)
-                            sendVkPic(answer.pic,request_str + answer.title + '\n' + "https://www.reddit.com"+answer.link);
-                        else
-                            sendMessage(request_str + answer.title + '\n' + "https://www.reddit.com"+answer.link);
-                    },function (answer) {
-                        return bayan_checker.add(hashFnv32a(answer.link));
-                    });
-                });
-            }
-        }
-
-        if (command == 'bash')
-        {
-            request.get('http://bohdash.com/random/bash/random.php', function(err,res,body)
-            {
-                processContent(function () {
-                    return parseBashQuote(body);
-                },sendMessage,
-                    function (answer)
-                    {
-                        return bayan_checker.add(hashFnv32a(answer));
-                    });
-            });
-        }
-
-        if (command == 'news')
-        {
-            request.get('https://yandex.ru', function(err,res,body)
-            {
-                processContent(function () {
-                    return parseYandexNews(body);
-                },sendMessage,function (answer) {
-                    return bayan_checker.add(hashFnv32a(answer));
-                });
-            });
-        }
-
-        if (command == 'ignore_list')
-        {
-            sendMessage('Ignored list: ' + ignore_list.showValues(), false);
-        }
-
-        if (command == 'question')
-        {
-            if (checkQuiz())
-            {
-                sendMessage('Текущий вопрос:\n' + quiz_data.get(chat_id).question, false);
-            }
-        }
-
-        if (command == 'scores')
-        {
-            if (checkQuiz())
-            {
-                printLeaderBoard();
-            }
-        }
-
-        if (command == 'commands')
-        {
-            sendMessage('Доступные команды:\n' + stationary_commands.showKeys('\n'), false);
-        }
-
-        if (command == 'help')
-        {
-            sendMessage(config.help, false);
-        }
-
-        if(checkModeratorPrivileges(sender)) 
-        {    
-            if (command == 'launch_quiz')
-            {
-                launch_quiz();
-            }
-
-            if (command == 'stop_quiz')
-            {
-                stop_quiz();
-                sendMessage('Викторина окончена!',false);
-            }
-            if (command == 'hint')
-            {
-                if (checkQuiz()) {
-                    quiz_data.get(chat_id).quiz_msg_counter = 0;
-                    showNextQuizHint();
-                }
-            }
-            if (command == 'skip')
-            {
-                if (checkQuiz())
-                {
-                    quiz_data.get(chat_id).quiz_hints = [];
-                    showNextQuizHint();
-                }
-            }
-        }
-        if (checkAdminPrivileges(sender))
-        {
-            if (command == 'op')
-            {
-                if (checkMinArgsNumber(args,1))
-                {
-                    sendMessage(args[0] + ' теперь имеет права ' + roles.op(args[0]));
-                }
-            }
-
-            if (command == 'deop')
-            {
-                if (checkMinArgsNumber(args,1))
-                {
-                    sendMessage(args[0] + ' теперь имеет права ' + roles.deop(args[0]));
-                }
-            }
-
-            if (command == 'enable_pics')
-            {
-                if (intervals.has(chat_id))
-                    sendMessage('Вообще-то модуль уже запущен, еще раз подумай.');
-                else
-                {
-                    sendMessage('Пикча запущена!');
-                    intervals.set(chat_id, setInterval(postRandomPic, config.picture_period * 60 * 1000));
-                    postRandomPic();
-                }
-            }
-
-            if (command == 'disable_pics')
-            {
-                sendMessage('Пикча распущена!');
-                disablePics();
-            }
-            
-            
-
-
-            if (command == 'clear_history')
-            {
-                sendMessage('Баяны очищены!', false);
-                bayan_checker.clear();
-            }
-			
-
-            if (command == 'ignore_add')
-            {
-                if (checkMinArgsNumber(args, 1))
-                {
-                    if (!ignore_list.has(args[0]))
-                    {
-                        ignore_list.add(args[0]);
-                        sendMessage('Добавлен игнор ' + args[0], false);
+                if (checkIgnore(args[0])) {
+                    if (args[0] == 'digger' || args[0] == 'dicker_photos' || args[0] == 'диккер') {
+                        msg.send("ееее диккер!", {attach: randomArrayElement(dicker_photos), fwd: false});
                     }
-                    else
-                        sendMessage(args[0] +' уже есть в списке игнора!');
-                }
+                    else {
+                        request.get("https://yande.re/post?tags=" + args[0], function (err, res, body) {
+                            if (body.indexOf('Nobody here but us chickens!') != -1) {
+                                request.get("https://yande.re/tag?name=" + args[0] + "&type=&order=count", function (err, res, body) {
+                                    //console.log(body);
+                                    var elem_exp = /<td align="right">[^]*?>\?<\/a>/g;
 
-            }
+                                    var count_exp = '<td align="right">.*?</td>';
+                                    var title_exp = /title=.*?>/i;
 
-            if (command == 'ignore_del')
-            {
-                if (checkMinArgsNumber(args, 1))
-                {
-                    if (ignore_list.has(args[0])) {
-                        ignore_list.delete(args[0]);
-                        sendMessage('Удален игнор ' + args[0], false);
+                                    var matches = body.match(elem_exp);
+
+                                    //console.log(matches);
+
+                                    var counts = [];
+                                    var sum = 0;
+                                    var titles = [];
+
+                                    if (!matches) {
+                                        sendMessage('No matches found!');
+                                        return;
+                                    }
+
+                                    matches.forEach(function (elem) {
+                                        //console.log(elem);
+                                        var count = (+elem.match(new RegExp(count_exp)).toString().slice(6, -2));
+                                        var title = elem.match(new RegExp(title_exp)).toString().slice(6, -2);
+
+                                        counts.push(count);
+                                        titles.push(title);
+                                        sum += count;
+
+                                    });
+
+                                    //console.log(titles);
+
+                                    var v = getRandomInt(0, sum);
+
+                                    var c = 0;
+                                    var i = 0;
+                                    while (c < v) {
+                                        c += counts[i];
+                                        i++;
+                                    }
+
+                                    args[0] = titles[i];
+
+                                    request_str += 'fixed to ' + decodeURIComponent(args[0]) + '\n';
+
+                                    request.get("https://yande.re/post?tags=" + args[0], function (err, res, body) {
+                                        processYandereRequest(body);
+                                    });
+                                });
+                            }
+                            else {
+                                processYandereRequest(body);
+                            }
+                        });
                     }
-                    else
-                        sendMessage(args[0] +' нет в списке игнора!');
                 }
             }
 
-            if (command == 'addpic')
-            {
-                if (checkMinArgsNumber(args,1)) {
-
-                    var id = msg.id;
-
-                    var com = {message: (args[1] ? args.slice(1).join(' ') : ''), attach: []};
-
-                    vk.api.messages.getById({message_ids: msg.id}).then(function (data) {
-                        data.items[0].attachments.forEach(function (attachment) {
-                            var photo = attachment.photo;
-                            //var str = 'photo'+formatVkPhotoString(photo.id,photo.owner_id,photo.access_key);
-                            vk.upload.message({
-                                file: pickLargestVkPhotoLink(photo)
-                            }).then(function (data) {
-                                var pik_id = formatVkPhotoString(data['id'], data['owner_id']);
-                                com.attach.push('photo' + pik_id);
-                            });
-                            sendMessage('Команда ' + args[0] + (stationary_commands.has(args[0]) ? ' изменена!' : ' добавлена!'), false);
+            if (command == 'pic' || command == 'пик') {
+                if (args.length == 0) {
+                    args = [randomArrayElement(defaultSubreddit)];
+                    request_str += 'fixed to ' + args[0] + '\n';
+                }
+                if (checkIgnore(args[0])) {
+                    request.get("https://www.reddit.com/r/" + args[0] + "/new/.json", function (err, res, body) {
+                        processContent(function () {
+                            return parseRedditPic(body, getRandomInt(0, 25));
+                        }, function (answer) {
+                            if (answer.pic)
+                                sendVkPic(answer.pic, request_str + answer.title + '\n' + "https://www.reddit.com" + answer.link);
+                            else
+                                sendMessage(request_str + answer.title + '\n' + "https://www.reddit.com" + answer.link);
+                        }, function (answer) {
+                            return bayan_checker.add(hashFnv32a(answer.link));
                         });
                     });
-                    stationary_commands.add(args[0], com);
                 }
             }
 
-            if (command == 'addcom')
+            if (command == 'bash') {
+                request.get('http://bohdash.com/random/bash/random.php', function (err, res, body) {
+                    processContent(function () {
+                            return parseBashQuote(body);
+                        }, sendMessage,
+                        function (answer) {
+                            return bayan_checker.add(hashFnv32a(answer));
+                        });
+                });
+            }
+
+            if (command == 'news') {
+                request.get('https://yandex.ru', function (err, res, body) {
+                    processContent(function () {
+                        return parseYandexNews(body);
+                    }, sendMessage, function (answer) {
+                        return bayan_checker.add(hashFnv32a(answer));
+                    });
+                });
+            }
+
+            if (command == 'ignore_list') {
+                sendMessage('Ignored list: ' + ignore_list.showValues(), false);
+            }
+
+            if (command == 'question') {
+                if (checkQuiz()) {
+                    sendMessage('Текущий вопрос:\n' + quiz_data.get(chat_id).question, false);
+                }
+            }
+
+            if (command == 'scores') {
+                if (checkQuiz()) {
+                    printLeaderBoard();
+                }
+            }
+
+            if (command == 'commands') {
+                sendMessage('Доступные команды:\n' + stationary_commands.showKeys('\n'), false);
+            }
+
+            if (command == 'help') {
+                sendMessage(config.help, false);
+            }
+
+            if (checkModeratorPrivileges(sender)) {
+                if (command == 'launch_quiz') {
+                    launch_quiz();
+                }
+
+                if (command == 'stop_quiz') {
+                    stop_quiz();
+                    sendMessage('Викторина окончена!', false);
+                }
+                if (command == 'hint') {
+                    if (checkQuiz()) {
+                        quiz_data.get(chat_id).quiz_msg_counter = 0;
+                        showNextQuizHint();
+                    }
+                }
+                if (command == 'skip') {
+                    if (checkQuiz()) {
+                        quiz_data.get(chat_id).quiz_hints = [];
+                        showNextQuizHint();
+                    }
+                }
+            }
+            if (checkAdminPrivileges(sender)) {
+                if (command == 'op') {
+                    if (checkMinArgsNumber(args, 1)) {
+                        sendMessage(args[0] + ' теперь имеет права ' + roles.op(args[0]));
+                    }
+                }
+
+                if (command == 'deop') {
+                    if (checkMinArgsNumber(args, 1)) {
+                        sendMessage(args[0] + ' теперь имеет права ' + roles.deop(args[0]));
+                    }
+                }
+
+                if (command == 'enable_pics') {
+                    if (intervals.has(chat_id))
+                        sendMessage('Вообще-то модуль уже запущен, еще раз подумай.');
+                    else {
+                        sendMessage('Пикча запущена!');
+                        intervals.set(chat_id, setInterval(postRandomPic, config.picture_period * 60 * 1000));
+                        postRandomPic();
+                    }
+                }
+
+                if (command == 'disable_pics') {
+                    sendMessage('Пикча распущена!');
+                    disablePics();
+                }
+
+                if (command == 'clear_history') {
+                    sendMessage('Баяны очищены!', false);
+                    bayan_checker.clear();
+                }
+
+
+                if (command == 'ignore_add') {
+                    if (checkMinArgsNumber(args, 1)) {
+                        if (!ignore_list.has(args[0])) {
+                            ignore_list.add(args[0]);
+                            sendMessage('Добавлен игнор ' + args[0], false);
+                        }
+                        else
+                            sendMessage(args[0] + ' уже есть в списке игнора!');
+                    }
+
+                }
+
+                if (command == 'ignore_del') {
+                    if (checkMinArgsNumber(args, 1)) {
+                        if (ignore_list.has(args[0])) {
+                            ignore_list.delete(args[0]);
+                            sendMessage('Удален игнор ' + args[0], false);
+                        }
+                        else
+                            sendMessage(args[0] + ' нет в списке игнора!');
+                    }
+                }
+
+                if (command == 'addpic') {
+                    if (checkMinArgsNumber(args, 1)) {
+
+                        var id = msg.id;
+
+                        var com = {message: (args[1] ? args.slice(1).join(' ') : ''), attach: []};
+
+                        vk.api.messages.getById({message_ids: msg.id}).then(function (data) {
+                            data.items[0].attachments.forEach(function (attachment) {
+                                var photo = attachment.photo;
+                                //var str = 'photo'+formatVkPhotoString(photo.id,photo.owner_id,photo.access_key);
+                                vk.upload.message({
+                                    file: pickLargestVkPhotoLink(photo)
+                                }).then(function (data) {
+                                    var pik_id = formatVkPhotoString(data['id'], data['owner_id']);
+                                    com.attach.push('photo' + pik_id);
+                                });
+                                sendMessage('Команда ' + args[0] + (stationary_commands.has(args[0]) ? ' изменена!' : ' добавлена!'), false);
+                                stationary_commands.add(args[0], com);
+                            });
+                        });
+                    }
+                }
+
+                if (command == 'addcom') {
+                    if (checkMinArgsNumber(args, 1)) {
+
+                        var com;
+
+                        if (args.length > 1) {
+                            //parseForwardedMessagesIds(msg.fwd)
+                            com = {message: args.slice(1).join(' ')};
+                            sendMessage('Команда ' + args[0] + (stationary_commands.has(args[0]) ? ' изменена!' : ' добавлена!'), false);
+                            stationary_commands.add(args[0], com);
+                        }
+                        else {
+                            //var response = vk.api.photos.getById({photos:msg.attach.photo.map((x) => x.get).join(',')}).then((response) => console.log(response));
+                            command_queue.push({author: sender, key: args[0]});
+                            sendMessage('Команда ' + args[0] + ' ждет назначения следующим сообщением автора', false);
+                            //console.log(com);
+                        }
+
+                    }
+                }
+
+                if (command == 'delcom') {
+                    if (checkMinArgsNumber(args, 1)) {
+                        if (stationary_commands.has(args[0])) {
+                            stationary_commands.delete(args[0]);
+                            sendMessage('Команда ' + args[0] + ' удалена!', false);
+                        }
+                        else
+                            return sendMessage('Команды ' + args[0] + ' нет в списке!');
+                    }
+                }
+            }
+            check_stationary_command(command);
+        }
+        if (command == 'role')
+        {
+            if (args.length > 0)
             {
-                if (checkMinArgsNumber(args, 1))
-                {
-
-                    var com;
-
-                    if (args.length > 1)
-                    {
-                        //parseForwardedMessagesIds(msg.fwd)
-                        com = {message: args.slice(1).join(' ')};
-                        sendMessage('Команда ' + args[0] + (stationary_commands.has(args[0]) ? ' изменена!' : ' добавлена!'), false);
-                        stationary_commands.add(args[0], com);
-                    }
-                    else
-                    {
-                        //var response = vk.api.photos.getById({photos:msg.attach.photo.map((x) => x.get).join(',')}).then((response) => console.log(response));
-                        command_queue.push({author:sender,key:args[0]});
-                        sendMessage('Команда ' + args[0] + ' ждет назначения следующим сообщением автора', false);
-                        //console.log(com);
-                    }
-
-                }
+                sendMessage('Уровень доступа ' + args[0] + ' = ' + roles.getPrivileges(args[0]))
             }
-
-            if (command == 'delcom') {
-                if (checkMinArgsNumber(args, 1))
-                {
-                    if (stationary_commands.has(args[0])) {
-                        stationary_commands.delete(args[0]);
-                        sendMessage('Команда ' + args[0] + ' удалена!', false);
-                    }
-                    else
-                        return sendMessage('Команды ' + args[0] +' нет в списке!');
-                }
+            else
+            {
+                sendMessage('Уровень доступа ' + sender + ' = ' + roles.getPrivileges(sender))
             }
         }
-        check_stationary_command(command);
     }
     check_quiz_answer(msgtext);
 });
