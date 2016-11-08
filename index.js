@@ -331,7 +331,7 @@ vk.on('message',(msg) =>
 
     function checkAdminPrivileges(sender, warning)
     {
-        if (isModerator(sender))
+        if (isAdmin(sender))
             return true;
         if (warning)
             sendMessage('Недостаточно прав! Необходимы права администратора');
@@ -340,7 +340,7 @@ vk.on('message',(msg) =>
 
     function checkModeratorPrivileges(sender, warning)
     {
-        if (isAdmin(sender))
+        if (isModerator(sender))
             return true;
         if (warning)
             sendMessage('Недостаточно прав! Необходимы права модератора');
