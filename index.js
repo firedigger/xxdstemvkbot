@@ -249,6 +249,16 @@ vk.on('message',(msg) =>
             return msg.send(message,{ attach: "photo"+pik_id, fwd:false});
         });
     }
+    
+    function getvkName(id,n_c,callback) {
+        vk.api.users.get({
+            user_ids: id,
+            name_case: n_c
+        }).then(function(data) {
+            return callback(data[0].first_name + " " + data[0].last_name);
+    });
+        }
+                
 
     function sendMessage(message, copy_request)
     {
@@ -465,6 +475,7 @@ vk.on('message',(msg) =>
         quiz_data.get(chat_id).leaderboard.get(sender).points++;
         printLeaderBoard();
     }
+    
 
     function showNextQuizHint()
     {
@@ -705,13 +716,25 @@ vk.on('message',(msg) =>
             if (checkAdminPrivileges(sender)) {
                 if (command == 'op') {
                     if (checkMinArgsNumber(args, 1)) {
-                        sendMessage(args[0] + ' теперь имеет права ' + roles.op(args[0]));
+                                        getvkName(args[0],"Nom", function(name) {
+                sendMessage( name + ' Теперь имеет права: ' + getPrivilegesName(roles.op(args[0])))
+                });
                     }
                 }
 
                 if (command == 'deop') {
                     if (checkMinArgsNumber(args, 1)) {
-                        sendMessage(args[0] + ' теперь имеет права ' + roles.deop(args[0]));
+                           getvkName(args[0],"Nom", function(name) {
+                sendMessage( name + ' Теперь имеет права: ' + getPrivilegesName(roles.deop(args[0])))
+                });
+                    }
+                }
+                if (command == 'ban'){
+                    if(checkMinArgsNumber(args, 1)) {
+                        roles.setPrivileges(args[0],-1);
+                         getvkName(args[0],"nom", function(name) {
+                        sendMessage(name+ " больше не может использовать бота!");
+                         });
                     }
                 }
 
@@ -821,7 +844,9 @@ vk.on('message',(msg) =>
         {
             if (args.length > 0)
             {
-                sendMessage('Уровень доступа ' + args[0] + ': ' + getPrivilegesName(roles.getPrivileges(args[0])))
+                getvkName(args[0],"gen", function(name) {
+                sendMessage('Уровень доступа у ' + name + ': ' + getPrivilegesName(roles.getPrivileges(args[0])))
+                });
             }
             else
             {
