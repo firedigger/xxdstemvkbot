@@ -315,7 +315,6 @@ vk.on('message',(msg) =>
 
     function sendMessageObject(msgObject)
     {
-        //console.log(params);
         return msg.send(msgObject);
     }
 
@@ -567,67 +566,78 @@ vk.on('message',(msg) =>
                 }
                 if (checkIgnore(args[0])) {
                     if (args[0] == 'digger' || args[0] == 'dicker_photos' || args[0] == 'диккер') {
-                        msg.send("ееее диккер!", {attach: randomArrayElement(dicker_photos), fwd: false});
+                        sendMessageObject({message:"ееее диккер!", attach: randomArrayElement(dicker_photos)});
+                        return;
                     }
-                    else {
-                        request.get("https://yande.re/post?tags=" + args[0], function (err, res, body) {
-                            if (body.indexOf('Nobody here but us chickens!') != -1) {
-                                request.get("https://yande.re/tag?name=" + args[0] + "&type=&order=count", function (err, res, body) {
-                                    //console.log(body);
-                                    var elem_exp = /<td align="right">[^]*?>\?<\/a>/g;
+                    if (args[0] == 'годнота')
+                    {
+                        if (godnota.size() > 0) {
+                            var photo_id = godnota.pickRandom();
+                            sendMessageObject({attach: photo_id});
+                        }
+                        else
+                        {
+                            sendMessage('Годнота пустует, бро');
+                        }
+                        return;
+                    }
+                    request.get("https://yande.re/post?tags=" + args[0], function (err, res, body) {
+                        if (body.indexOf('Nobody here but us chickens!') != -1) {
+                            request.get("https://yande.re/tag?name=" + args[0] + "&type=&order=count", function (err, res, body) {
+                                //console.log(body);
+                                var elem_exp = /<td align="right">[^]*?>\?<\/a>/g;
 
-                                    var count_exp = '<td align="right">.*?</td>';
-                                    var title_exp = /title=.*?>/i;
+                                var count_exp = '<td align="right">.*?</td>';
+                                var title_exp = /title=.*?>/i;
 
-                                    var matches = body.match(elem_exp);
+                                var matches = body.match(elem_exp);
 
-                                    //console.log(matches);
+                                //console.log(matches);
 
-                                    var counts = [];
-                                    var sum = 0;
-                                    var titles = [];
+                                var counts = [];
+                                var sum = 0;
+                                var titles = [];
 
-                                    if (!matches) {
-                                        sendMessage('No matches found!');
-                                        return;
-                                    }
+                                if (!matches) {
+                                    sendMessage('No matches found!');
+                                    return;
+                                }
 
-                                    matches.forEach(function (elem) {
-                                        //console.log(elem);
-                                        var count = (+elem.match(new RegExp(count_exp)).toString().slice(6, -2));
-                                        var title = elem.match(new RegExp(title_exp)).toString().slice(6, -2);
+                                matches.forEach(function (elem) {
+                                    //console.log(elem);
+                                    var count = (+elem.match(new RegExp(count_exp)).toString().slice(6, -2));
+                                    var title = elem.match(new RegExp(title_exp)).toString().slice(6, -2);
 
-                                        counts.push(count);
-                                        titles.push(title);
-                                        sum += count;
+                                    counts.push(count);
+                                    titles.push(title);
+                                    sum += count;
 
-                                    });
-
-                                    //console.log(titles);
-
-                                    var v = getRandomInt(0, sum);
-
-                                    var c = 0;
-                                    var i = 0;
-                                    while (c < v) {
-                                        c += counts[i];
-                                        i++;
-                                    }
-
-                                    args[0] = titles[i];
-
-                                    request_str += 'fixed to ' + decodeURIComponent(args[0]) + '\n';
-
-                                    request.get("https://yande.re/post?tags=" + args[0], function (err, res, body) {
-                                        processYandereRequest(body);
-                                    });
                                 });
-                            }
-                            else {
-                                processYandereRequest(body);
-                            }
-                        });
-                    }
+
+                                //console.log(titles);
+
+                                var v = getRandomInt(0, sum);
+
+                                var c = 0;
+                                var i = 0;
+                                while (c < v) {
+                                    c += counts[i];
+                                    i++;
+                                }
+
+                                args[0] = titles[i];
+
+                                request_str += 'fixed to ' + decodeURIComponent(args[0]) + '\n';
+
+                                request.get("https://yande.re/post?tags=" + args[0], function (err, res, body) {
+                                    processYandereRequest(body);
+                                });
+                            });
+                        }
+                        else {
+                            processYandereRequest(body);
+                        }
+                    });
                 }
             }
 
@@ -689,21 +699,24 @@ vk.on('message',(msg) =>
                 }
             }
             
-              if (command == 'годно') {
-             
-                  if(last_attach != undefined)
-                      if(!godnota.has(last_attach))
-                          if(!godnota.add(last_attach)) {
-                          sendMessage('Годно !', false);
-                          last_attach = undefined;
-                          }
+            if (command == 'годнота')
+            {
+                if(last_attach != undefined)
+                {
+                    if (!godnota.add(last_attach))
+                    {
+                        sendMessage('Сохранил годноту!');
+                    }
+                    else
+                    {
+                        sendMessage('Уже сохранил бро!');
+                    }
+                }
+                else
+                {
+                    sendMessage('Не понял');
+                }
             }
-            
-            if (command == 'годнота') {
-                var photo_id  = randomArrayElement(godnota.Array());
-                msg.send({attach: photo_id});
-            }
-            
 
             if (command == 'commands') {
                 sendMessage('Доступные команды:\n' + stationary_commands.showKeys('\n'), false);

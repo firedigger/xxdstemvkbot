@@ -52,10 +52,31 @@ SerializableSet.prototype.delete = function (elem)
     this.values.delete(elem);
 };
 
-
-SerializableSet.prototype.Array = function ()
+SerializableSet.prototype.size = function ()
 {
-     return Array.from(this.values);
+    return this.values.size;
+};
+
+
+SerializableSet.prototype.pickRandom = function ()
+{
+    var n = this.size();
+    var p = 1.0/n;
+    var result = undefined;
+    this.forEach(function (value)
+    {
+         var r = Math.random();
+         if (r <= p)
+         {
+             result = value;
+         }
+         console.log(p);
+         p/=(1-1.0/n);
+     });
+    if (result)
+        return result;
+    else
+        throw new Error('pickRandom algorithm exception (might be expty set)');
 };
 
 SerializableSet.prototype.save_to_file = function (filename)
