@@ -12,10 +12,12 @@ const commands_filename = config.commands_filename;
 const bayan_filename = config.bayan_filename;
 const ignore_list_filename = config.ignore_list_filename;
 const roles_filename = config.roles_filename;
+const godnota_filename = config.godnota_filename;
 
 var stationary_commands = new SerializableMap();
 var bayan_checker = new SerializableSet();
 var ignore_list = new SerializableSet();
+var godnota = new SerializableSet();
 var roles = new RoleManager();
 var cooldown = new FlagCooldowner(config.cooldown);
 
@@ -53,7 +55,9 @@ function initializeStructure(structure,filename, initializerList)
 initializeStructure(stationary_commands, commands_filename);
 initializeStructure(bayan_checker, bayan_filename);
 initializeStructure(ignore_list, ignore_list_filename);
+initializeStructure(godnota, godnota_filename);
 initializeStructure(roles, roles_filename, config.admins);
+
 
 const defaultSubreddit = config.defaultSubreddits;
 const defaultYandere = config.defaultYandere;
@@ -62,7 +66,7 @@ const dicker_photos = ["photo9680305_360353548","photo9680305_373629840","photo9
 const max_bayan_counter = 10;
 
 var command_queue = [];
-
+var last_attach = undefined;
 function getRandomInt(min, max)
 {
     return Math.floor(Math.random() * (max - min)) + min;
@@ -122,7 +126,7 @@ var recognize = new Recognize('rucaptcha', {
 
 recognize.balanse(function(price)
 {
-    console.log('RuCaptcha Balance:', price);
+    console.log('RuCaptcha Balance: ', price);
 });
 function randomArrayElement(arr)
 {
@@ -163,6 +167,7 @@ function saveFiles()
     bayan_checker.save_to_file(bayan_filename);
     roles.save_to_file(roles_filename);
     ignore_list.save_to_file(ignore_list_filename);
+    godnota.save_to_file(godnota_filename);
 }
 
 function generateRequestString(msg)
@@ -245,8 +250,9 @@ vk.on('message',(msg) =>
         vk.upload.message({
             file: picLink
         }).then(function(data) {
-            var pik_id = formatVkPhotoString(data['id'],data['owner_id']);
-            return msg.send(message,{ attach: "photo"+pik_id, fwd:false});
+            var pik_id ="photo"+formatVkPhotoString(data['id'],data['owner_id']);
+          last_attach = pik_id;
+            return msg.send(message,{ attach: pik_id, fwd:false});
         });
     }
     
@@ -682,6 +688,22 @@ vk.on('message',(msg) =>
                     printLeaderBoard();
                 }
             }
+            
+              if (command == 'годно') {
+             
+                  if(last_attach != undefined)
+                      if(!godnota.has(last_attach))
+                          if(!godnota.add(last_attach)) {
+                          sendMessage('Годно !', false);
+                          last_attach = undefined;
+                          }
+            }
+            
+            if (command == 'годнота') {
+                var photo_id  = randomArrayElement(godnota.Array());
+                msg.send({attach: photo_id});
+            }
+            
 
             if (command == 'commands') {
                 sendMessage('Доступные команды:\n' + stationary_commands.showKeys('\n'), false);
