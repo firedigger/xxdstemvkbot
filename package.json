@@ -17,8 +17,8 @@
   },
   "homepage": "https://github.com/firedigger/xxdstemvkbot#readme",
   "dependencies": {
+    "recognize": "^0.2.4",
     "request": "^2.76.0",
-    "vk-io": "^2.2.1",
-    "recognize": "latest"
+    "vk-io": "^2.2.1"
   }
 }
