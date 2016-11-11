@@ -112,15 +112,6 @@ function parseRedditPic(str)
     return {pic:pic,link:link,title:title};
 }
 
-vk.setting({
-    app: 5698491,
-    login: '+3580403706095',
-    pass: 'freestaler',
-    phone: '+3580403706095'
-});
-
-const auth = vk.standloneAuth();
-
 var longpoll = function (token) {
     vk.setToken(token);
     vk.longpoll().then(() =>
@@ -135,6 +126,13 @@ if (config.token)
 }
 else
 {
+    const auth = vk.standloneAuth();
+    vk.setting({
+        app: config.app,
+        login: config.login,
+        pass: config.password,
+        phone: config.phone
+    });
     auth.run()
         .then((token) => {
             console.log('Token:',token);
