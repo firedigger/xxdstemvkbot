@@ -112,13 +112,43 @@ function parseRedditPic(str)
     return {pic:pic,link:link,title:title};
 }
 
-vk.setToken(config.token);
-
-vk.longpoll().then(() =>
-{
-    console.log('Longpoll запущен!');
-    
+vk.setting({
+    app: 5698491,
+    login: '+3580403706095',
+    pass: 'freestaler',
+    phone: '+3580403706095'
 });
+
+const auth = vk.standloneAuth();
+
+var longpoll = function (token) {
+    vk.setToken(token);
+    vk.longpoll().then(() =>
+    {
+        console.log('Longpoll запущен!');
+    });
+};
+
+if (config.token)
+{
+    longpoll(config.token);
+}
+else
+{
+    auth.run()
+        .then((token) => {
+            console.log('Token:',token);
+            longpoll(token);
+        })
+        .catch((error) => {
+            console.error(error);
+        });
+}
+
+
+
+
+
 
 var recognize = new Recognize('rucaptcha', {
     key:config.rucaptcha
