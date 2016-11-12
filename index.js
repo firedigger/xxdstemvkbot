@@ -119,39 +119,36 @@ var longpoll = function (token) {
         console.log('Longpoll запущен!');
     });
 };
-
-if (config.token)
-{
-    longpoll(config.token);
-}
-else
-{
-    const auth = vk.standloneAuth();
-    vk.setting({
-        app: config.app,
-        login: config.login,
-        pass: config.password,
-        phone: config.phone
-    });
-    auth.run()
-        .then((token) => {
-            console.log('Token:',token);
-            longpoll(token);
-        })
-        .catch((error) => {
-            console.error(error);
+try {
+    if (config.token) {
+        longpoll(config.token);
+    }
+    else {
+        const auth = vk.standloneAuth();
+        vk.setting({
+            app: config.app,
+            login: config.login,
+            pass: config.password,
+            phone: config.phone
         });
+        auth.run()
+            .then((token) => {
+                console.log('Token:', token);
+                longpoll(token);
+            })
+            .catch((error) => {
+                console.error(error);
+            });
+    }
+
+    var recognize = new Recognize('rucaptcha', {
+        key: config.rucaptcha
+    });
 }
-
-
-
-
-
-
-var recognize = new Recognize('rucaptcha', {
-    key:config.rucaptcha
-});
-
+catch (e)
+{
+    console.log(e);
+}
 recognize.balanse(function(price)
 {
     console.log('RuCaptcha Balance: ', price);
