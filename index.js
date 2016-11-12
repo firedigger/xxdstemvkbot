@@ -122,7 +122,7 @@ var longpoll = function (token) {
             console.log(error + '\n' + error.redirect_uri);
         else
         {
-            console.log(JSON.stringify(error));
+            console.log(error);
         }
     });
 };
