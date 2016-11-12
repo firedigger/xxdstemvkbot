@@ -141,7 +141,7 @@ else {
                 console.log(error + '\n' + error.redirect_uri);
             else
             {
-                console.log(error);
+                console.log(JSON.stringify(error));
             }
         });
 }
