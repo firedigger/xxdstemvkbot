@@ -63,7 +63,7 @@ const defaultSubreddit = config.defaultSubreddits;
 const defaultYandere = config.defaultYandere;
 
 const dicker_photos = ["photo9680305_360353548","photo9680305_373629840","photo9680305_356010821","photo9680305_340526271","photo9680305_324159352","photo9680305_248221743","photo297755100_438730139"];
-const max_bayan_counter = 10;
+const max_bayan_counter = 25;
 
 var command_queue = [];
 var last_attach = undefined;
@@ -727,7 +727,18 @@ vk.on('message',(msg) =>
                 }
             }
             
-            if (command == 'годнота')
+           
+
+            if (command == 'commands') {
+                sendMessage('Доступные команды:\n' + stationary_commands.showKeys('\n'), false);
+            }
+
+            if (command == 'help') {
+                sendMessage(config.help, false);
+            }
+
+            if (checkModeratorPrivileges(sender)) {
+                 if (command == 'годнота')
             {
                 if(last_attach != undefined)
                 {
@@ -745,16 +756,6 @@ vk.on('message',(msg) =>
                     sendMessage('Не понял');
                 }
             }
-
-            if (command == 'commands') {
-                sendMessage('Доступные команды:\n' + stationary_commands.showKeys('\n'), false);
-            }
-
-            if (command == 'help') {
-                sendMessage(config.help, false);
-            }
-
-            if (checkModeratorPrivileges(sender)) {
                 if (command == 'launch_quiz') {
                     launch_quiz();
                 }
