@@ -35,7 +35,7 @@ function hashFnv32a(str, asString, seed)
         // Convert to 8 digit hex string
         return ("0000000" + (hval >>> 0).toString(16)).substr(-8);
     }
-    return hval >>> 0;
+    return (hval >>> 0) + '';
     //return str;
 }
 
