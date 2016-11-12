@@ -117,15 +117,20 @@ var longpoll = function (token) {
     vk.longpoll().then(() =>
     {
         console.log('Longpoll запущен!');
+    }).catch((error) => {
+        if (error.redirect_uri)
+            console.log(error + '\n' + error.redirect_uri);
+        else
+        {
+            console.log(error);
+        }
     });
 };
 
-if (config.token)
-{
+if (config.token) {
     longpoll(config.token);
 }
-else
-{
+else {
     const auth = vk.standloneAuth();
     vk.setting({
         app: config.app,
@@ -135,21 +140,21 @@ else
     });
     auth.run()
         .then((token) => {
-            console.log('Token:',token);
+            console.log('Token:', token);
             longpoll(token);
         })
         .catch((error) => {
-            console.error(error);
+            if (error.redirect_uri)
+                console.log(error + '\n' + error.redirect_uri);
+            else
+            {
+                console.log(JSON.stringify(error));
+            }
         });
 }
 
-
-
-
-
-
 var recognize = new Recognize('rucaptcha', {
-    key:config.rucaptcha
+    key: config.rucaptcha
 });
 
 recognize.balanse(function(price)
