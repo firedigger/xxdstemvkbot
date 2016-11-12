@@ -117,6 +117,13 @@ var longpoll = function (token) {
     vk.longpoll().then(() =>
     {
         console.log('Longpoll запущен!');
+    }).catch((error) => {
+        if (error.redirect_uri)
+            console.log(error + '\n' + error.redirect_uri);
+        else
+        {
+            console.log(JSON.stringify(error));
+        }
     });
 };
 
