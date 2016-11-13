@@ -1,6 +1,7 @@
 const request = require("request");
 const fs = require('fs');
 const vk = new (require('vk-io'));
+const cheerio = require('cheerio');
 const SerializableMap = require('./SerializableMap');
 const SerializableSet = require('./SerializableSet');
 const Recognize = require('recognize');
@@ -23,7 +24,6 @@ var cooldown = new FlagCooldowner(config.cooldown);
 
 function hashFnv32a(str, asString, seed)
 {
-
     var i, l,
         hval = (seed === undefined) ? 0x811c9dc5 : seed;
 
@@ -36,7 +36,6 @@ function hashFnv32a(str, asString, seed)
         return ("0000000" + (hval >>> 0).toString(16)).substr(-8);
     }
     return (hval >>> 0) + '';
-    //return str;
 }
 
 function initializeStructure(structure,filename, initializerList)
@@ -61,12 +60,17 @@ initializeStructure(roles, roles_filename, config.admins);
 
 const defaultSubreddit = config.defaultSubreddits;
 const defaultYandere = config.defaultYandere;
+const defaultGelbooru = config.defaultGelbooru;
 
 const dicker_photos = ["photo9680305_360353548","photo9680305_373629840","photo9680305_356010821","photo9680305_340526271","photo9680305_324159352","photo9680305_248221743","photo297755100_438730139"];
-const max_bayan_counter = 25;
 
+const max_bayan_counter = config.max_bayan_counter;
+
+var bayan_counter = 0;
 var command_queue = [];
 var last_attach = undefined;
+var postedPic = false;
+
 function getRandomInt(min, max)
 {
     return Math.floor(Math.random() * (max - min)) + min;
@@ -92,10 +96,10 @@ function parseYanderesPic(str)
     {
         result.push(elem.toString().slice(37,-32));
     });
-    return result;
+    return randomArrayElement(result);
 }
 
-function parseRedditPic(str)
+function parseRedditPost(str)
 {
     var children = JSON.parse(str)['data']['children'];
 
@@ -239,7 +243,7 @@ vk.setCaptchaHandler((src,again) => {
 });
 
 var quiz_data = new Map();
-
+var intervalPeriods = new Map();
 var intervals = new Map();
 
 function formatVkPhotoString(id, owner_id, access_key)
@@ -260,6 +264,27 @@ function pickLargestVkPhotoLink(photo)
     return links[i];
 }
 
+function parseGelbooruPic(body)
+{
+    var $ = cheerio.load(body);
+
+    var result = $('#image').attr('src');
+
+    return result;
+}
+
+function parseGelbooruPicId(body)
+{
+    var $ = cheerio.load(body);
+
+    var result = [];
+    $('.thumb').each(function (i,obj) {
+        result.push($(obj).attr('id'));
+    });
+
+    return result;
+}
+
 vk.on('message',(msg) =>
 {
     var msgtext = "";
@@ -267,6 +292,8 @@ vk.on('message',(msg) =>
         msgtext = msg.text;
     var sender = msg.user;
     var chat_id = msg.chat;
+
+    postedPic = false;
 
     command_queue.forEach(function (elem) {
         if (elem.author == sender)
@@ -310,30 +337,6 @@ vk.on('message',(msg) =>
     function sendMessageWithFwd(message)
     {
         return msg.send(message,{fwd:true});
-    }
-
-    function processContent(contentRetrieval,contentSender, bayanCheck)
-    {
-        try
-        {
-            var answer = undefined;
-            var i = 0;
-            while(!answer || bayanCheck(answer))
-            {
-                answer = contentRetrieval();
-                i++;
-                if (i > max_bayan_counter)
-                    break;
-            }
-            if (i > max_bayan_counter)
-                sendMessage('Забаянился');
-            else
-                contentSender(answer);
-        }
-        catch (err)
-        {
-            sendMessage("хуйня какая-та!" + '\n' + err.message);
-        }
     }
 
     function checkMinArgsNumber(args, min)
@@ -421,24 +424,6 @@ vk.on('message',(msg) =>
         else
             return true;
         return false;
-    }
-
-    function processYandereRequest(body)
-    {
-        processContent(function () {
-            return randomArrayElement(parseYanderesPic(body));
-        },function (answer) {
-            sendVkPic(answer,request_str);
-        },function (answer) {
-            return bayan_checker.add(hashFnv32a(answer));
-        });
-    }
-
-    function parseForwardedMessagesIds(fwds)
-    {
-        return fwds.map(function (elem) {
-            return elem.id;
-        }).join(',');
     }
 
     function disablePics()
@@ -551,20 +536,152 @@ vk.on('message',(msg) =>
             }
     }
 
-    function postRandomPic()
+    function postRandomPic(title)
     {
-        request.get("https://yande.re/post?tags=" + randomArrayElement(defaultYandere), function (err, res, body)
+        if (!postedPic)
         {
-            processContent(function () {
-                return randomArrayElement(parseYanderesPic(body));
-            },function (answer) {
-                sendVkPic(answer,"Пикча каждые " + config.picture_period + " минут");
-            },function (answer) {
-                return bayan_checker.add(hashFnv32a(answer));
+            //var services = [requestRandomRedditPic];
+            var services = [requestRandomGelbooruPic, requestRandomRedditPic, requestRandomYanderePic];
+            var chosen = randomArrayElement(services);
+            console.log(chosen.name);
+            postPicFromService(chosen,title);
+        }
+        postedPic = true;
+    }
+
+    function postPicFromService(requestCallback, messageTitle)
+    {
+        requestCallback(function (answer) {
+            if (!answer) {
+                sendMessage('Ошибка получения контента');
+                return;
+            }
+            if (answer.pic)
+                answer = answer.pic;
+            try
+            {
+                if (bayan_checker.add(hashFnv32a(answer)))
+                {
+                    ++bayan_counter;
+                    if (bayan_counter > max_bayan_counter)
+                    {
+                        sendMessage('Не смог найти ни одной новой пикчи, сорян');
+                    }
+                    else
+                        postPicFromService(requestCallback, messageTitle);
+                }
+                else
+                {
+                    sendVkPic(answer, messageTitle);
+                }
+            }
+            catch (err)
+            {
+                sendMessage("хуйня какая-та!\n" + err);
+            }
+        },messageTitle);
+    }
+
+    function requestRandomRedditPic(callback)
+    {
+        requestReddit(randomArrayElement(defaultSubreddit),callback);
+    }
+
+    function requestRandomGelbooruPic(callback)
+    {
+        requestGelbooru(randomArrayElement(defaultGelbooru),callback);
+    }
+
+    function requestRandomYanderePic(callback)
+    {
+        requestYandere(randomArrayElement(defaultYandere),callback);
+    }
+
+    function requestReddit(subreddit,callback)
+    {
+        request.get("https://www.reddit.com/r/" + subreddit + "/new/.json", function (err, res, body) {
+            var answer = parseRedditPost(body);
+            callback(answer);
+        });
+    }
+
+    function requestGelbooru(tag, callback)
+    {
+        var url = "http://gelbooru.com/index.php?page=post&s=list&tags=" + tag + '+rating%3asafe';
+        request.get(url, function (err, res, body) {
+            var ids = parseGelbooruPicId(body);
+
+            var id = randomArrayElement(ids).slice(1);
+
+            var new_url = 'http://gelbooru.com/index.php?page=post&s=view&id=' + id;
+
+            request.get(new_url, function (err, res, body) {
+                callback(parseGelbooruPic(body));
             });
         });
     }
-	
+
+    function requestYandere(tag, callback)
+    {
+        request.get("https://yande.re/post?tags=" + tag, function (err, res, body) {
+            if (body.indexOf('Nobody here but us chickens!') != -1) {
+                request.get("https://yande.re/tag?name=" + tag + "&type=&order=count", function (err, res, body) {
+                    //console.log(body);
+                    var elem_exp = /<td align="right">[^]*?>\?<\/a>/g;
+
+                    var count_exp = '<td align="right">.*?</td>';
+                    var title_exp = /title=.*?>/i;
+
+                    var matches = body.match(elem_exp);
+
+                    //console.log(matches);
+
+                    var counts = [];
+                    var sum = 0;
+                    var titles = [];
+
+                    if (!matches) {
+                        sendMessage('No matches found!');
+                        return;
+                    }
+
+                    matches.forEach(function (elem) {
+                        //console.log(elem);
+                        var count = (+elem.match(new RegExp(count_exp)).toString().slice(6, -2));
+                        var title = elem.match(new RegExp(title_exp)).toString().slice(6, -2);
+
+                        counts.push(count);
+                        titles.push(title);
+                        sum += count;
+
+                    });
+
+                    //console.log(titles);
+
+                    var v = getRandomInt(0, sum);
+
+                    var c = 0;
+                    var i = 0;
+                    while (c < v) {
+                        c += counts[i];
+                        i++;
+                    }
+
+                    var fixed_tag = titles[i];
+
+                    request_str += 'fixed to ' + decodeURIComponent(fixed_tag) + '\n';
+
+                    request.get("https://yande.re/post?tags=" + fixed_tag, function (err, res, body) {
+                        callback(parseYanderesPic(body));
+                    });
+                });
+            }
+            else {
+                callback(parseYanderesPic(body));
+            }
+        });
+    }
+
 	function checkQuiz()
             {
                 if (quiz_data.has(chat_id) && quiz_data.get(chat_id).quiz_answer)
@@ -592,15 +709,52 @@ vk.on('message',(msg) =>
             }
             cooldown.trigger();
 
-            if (command == 'yan') {
-                if (args.length == 0) {
-                    args = [randomArrayElement(defaultYandere)];
-                    request_str += 'fixed to ' + args[0] + '\n';
+            if (command == 'pic' || command == 'пик')
+            {
+                if (args.length == 0)
+                {
+                    postRandomPic(request_str);
                 }
-                if (checkIgnore(args[0])) {
-                    if (args[0] == 'digger' || args[0] == 'dicker_photos' || args[0] == 'диккер') {
+                else
+                {
+                    if (args[0] == 'yan')
+                    {
+                        var callback = function (content) {
+                            sendVkPic(content,request_str);
+                        };
+
+                        if (args.length == 1)
+                            requestRandomYanderePic(callback);
+                        else if (checkIgnore(args[1]))
+                            requestYandere(args[1],callback);
+                    }
+
+                    if (args[0] == 'reddit')
+                    {
+                        var callback = function (content) {
+                            sendVkPic(content.pic,request_str);
+                        };
+
+                        if (args.length == 1)
+                            requestRandomRedditPic(callback);
+                        else if (checkIgnore(args[1]))
+                            requestReddit(args[1],callback);
+                    }
+
+                    if (args[0] == 'gel')
+                    {
+                        var callback = function (content) {
+                            sendVkPic(content,request_str);
+                        };
+
+                        if (args.length == 1)
+                            requestRandomGelbooruPic(callback);
+                        else if (checkIgnore(args[1]))
+                            requestGelbooru(args[1],callback);
+                    }
+                    if (args[0] == 'digger' || args[0] == 'dicker_photos' || args[0] == 'диккер')
+                    {
                         sendMessageObject({message:"ееее диккер!", attach: randomArrayElement(dicker_photos)});
-                        return;
                     }
                     if (args[0] == 'годнота')
                     {
@@ -610,10 +764,39 @@ vk.on('message',(msg) =>
                         }
                         else
                         {
-                            sendMessage('Годнота пустует, бро');
+                            sendMessage('Годнота пустует, бро! Ты знаешь, что делать.');
                         }
-                        return;
                     }
+                }
+            }
+
+            if (command == 'reddit')
+            {
+                if (checkMinArgsNumber(args,1))
+                {
+                    if (checkIgnore(args[1]))
+                    {
+
+                        var callback = function (content) {
+                            if (content.pic)
+                                sendVkPic(content.pic, request_str + content.title + '\n' + "https://www.reddit.com" + content.link);
+                            else
+                                sendMessage(request_str + content.title + '\n' + "https://www.reddit.com" + content.link);
+                        };
+
+                        requestReddit(args[0], callback);
+                    }
+                }
+            }
+/*
+            if (command == 'yan') {
+                if (args.length == 0) {
+                    args = [randomArrayElement(defaultYandere)];
+                    request_str += 'fixed to ' + args[0] + '\n';
+                }
+                if (checkIgnore(args[0])) {
+
+
                     request.get("https://yande.re/post?tags=" + args[0], function (err, res, body) {
                         if (body.indexOf('Nobody here but us chickens!') != -1) {
                             request.get("https://yande.re/tag?name=" + args[0] + "&type=&order=count", function (err, res, body) {
@@ -674,6 +857,11 @@ vk.on('message',(msg) =>
                 }
             }
 
+            if (command == 'gel')
+            {
+                requestRandomGelbooruPic();
+            }
+
             if (command == 'pic' || command == 'пик') {
                 if (args.length == 0) {
                     args = [randomArrayElement(defaultSubreddit)];
@@ -682,19 +870,16 @@ vk.on('message',(msg) =>
                 if (checkIgnore(args[0])) {
                     request.get("https://www.reddit.com/r/" + args[0] + "/new/.json", function (err, res, body) {
                         processContent(function () {
-                            return parseRedditPic(body, getRandomInt(0, 25));
+                            return parseRedditPost(body, getRandomInt(0, 25));
                         }, function (answer) {
-                            if (answer.pic)
-                                sendVkPic(answer.pic, request_str + answer.title + '\n' + "https://www.reddit.com" + answer.link);
-                            else
-                                sendMessage(request_str + answer.title + '\n' + "https://www.reddit.com" + answer.link);
+
                         }, function (answer) {
                             return bayan_checker.add(hashFnv32a(answer.link));
                         });
                     });
                 }
             }
-
+*/
             if (command == 'bash') {
                 request.get('http://bohdash.com/random/bash/random.php', function (err, res, body) {
                     processContent(function () {
@@ -731,8 +916,6 @@ vk.on('message',(msg) =>
                     printLeaderBoard();
                 }
             }
-            
-           
 
             if (command == 'commands') {
                 sendMessage('Доступные команды:\n' + stationary_commands.showKeys('\n'), false);
@@ -808,11 +991,19 @@ vk.on('message',(msg) =>
                 }
 
                 if (command == 'enable_pics') {
+
+                    var period = config.default_picture_period;
+                    if (args.length > 0)
+                    {
+                        period = (+args[0]);
+                    }
+
                     if (intervals.has(chat_id))
                         sendMessage('Вообще-то модуль уже запущен, еще раз подумай.');
                     else {
                         sendMessage('Пикча запущена!');
-                        intervals.set(chat_id, setInterval(postRandomPic, config.picture_period * 60 * 1000));
+                        intervals.set(chat_id, setInterval(postRandomPic, period * 60 * 1000));
+                        intervalPeriods.set(chat_id, period);
                         postRandomPic();
                     }
                 }
