@@ -15,12 +15,12 @@ const ignore_list_filename = config.ignore_list_filename;
 const roles_filename = config.roles_filename;
 const godnota_filename = config.godnota_filename;
 
-var stationary_commands = new SerializableMap();
-var bayan_checker = new SerializableSet();
-var ignore_list = new SerializableSet();
-var godnota = new SerializableSet();
-var roles = new RoleManager();
-var cooldown = new FlagCooldowner(config.cooldown);
+const stationary_commands = new SerializableMap();
+const bayan_checker = new SerializableSet();
+const ignore_list = new SerializableSet();
+const godnota = new SerializableSet();
+const roles = new RoleManager();
+const cooldown = new FlagCooldowner(config.cooldown);
 
 function hashFnv32a(str, asString, seed)
 {
@@ -66,10 +66,10 @@ const dicker_photos = ["photo9680305_360353548","photo9680305_373629840","photo9
 
 const max_bayan_counter = config.max_bayan_counter;
 
-var bayan_counter = 0;
-var command_queue = [];
-var last_attach = undefined;
-var postedPic = false;
+let bayan_counter = 0;
+let command_queue = [];
+let last_attach = undefined;
+let postedPic = false;
 
 function getRandomInt(min, max)
 {
@@ -80,6 +80,7 @@ function shuffleString(str) {
     return str.split('').sort(function(){return 0.5-Math.random()}).join('');
 }
 
+const intervals = new Map();
 function disableAllPics()
 {
     intervals.forEach((x) => clearInterval(x));
@@ -90,8 +91,8 @@ function parseYanderesPic(str)
 {
     const reg_str = '<a class="directlink largeimg" href=.*?><span class="directlink-info">';
 
-    var regexp = new RegExp(reg_str,'g');
-    var result = [];
+    const regexp = new RegExp(reg_str, 'g');
+    const result = [];
     str.match(regexp).forEach(function (elem)
     {
         result.push(elem.toString().slice(37,-32));
@@ -101,31 +102,31 @@ function parseYanderesPic(str)
 
 function parseRedditPost(str)
 {
-    var children = JSON.parse(str)['data']['children'];
+    const children = JSON.parse(str)['data']['children'];
 
-    var index = getRandomInt(0, children.length);
+    const index = getRandomInt(0, children.length);
 
-    var pic = undefined;
-    var parsed_body = children[index]['data'];
+    let pic = undefined;
+    let link = undefined;
+    const parsed_body = children[index]['data'];
     if (parsed_body['preview'] && parsed_body['preview']['images'])
     {
         pic = parsed_body['preview']['images'][0]['source']['url'];
-        var link = parsed_body['permalink'];
+        link = parsed_body['permalink'];
     }
-    var title = parsed_body['title'];
+    const title = parsed_body['title'];
     return {pic:pic,link:link,title:title};
 }
 
-var longpoll = function (token) {
+const longpoll = function (token)
+{
     vk.setToken(token);
-    vk.longpoll().then(() =>
-    {
+    vk.longpoll().then(() => {
         console.log('Longpoll запущен!');
     }).catch((error) => {
         if (error.redirect_uri)
             console.log(error + '\n' + error.redirect_uri);
-        else
-        {
+        else {
             console.log(error);
         }
     });
@@ -157,7 +158,7 @@ else {
         });
 }
 
-var recognize = new Recognize('rucaptcha', {
+const recognize = new Recognize('rucaptcha', {
     key: config.rucaptcha
 });
 
@@ -174,15 +175,15 @@ function parseYandexNews(str)
 {
     const reg_str = '<a href=.*?class="link list__item-content link_black_yes" aria-label=".*?>';
 
-    var regexp = new RegExp(reg_str,'g');
-    var result = '';
-    var i = 1;
+    const regexp = new RegExp(reg_str, 'g');
+    let result = '';
+    let i = 1;
     str.match(regexp).forEach(function (elem)
     {
         if (elem.indexOf('Изменить город') == -1) {
 
-            var link_exp = new RegExp('<a href=".*?"');
-            var title_exp = new RegExp('aria-label=".*?"');
+            const link_exp = new RegExp('<a href=".*?"');
+            const title_exp = new RegExp('aria-label=".*?"');
 
             if (i <= 5 && Math.random() > 0.5) {
                 result += i + '. ' + (elem.match(title_exp).toString().slice(12, -1)) + ' (' + (elem.match(link_exp).toString().slice(9, -1)) + ')' + '\n';
@@ -212,10 +213,10 @@ function generateRequestString(msg)
     return 'REQUEST: ' + msg.text + '\n';
 }
 
-var download = function(uri, filename, callback){
-  request.head(uri, function(err, res, body){
-    request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
-  });
+const download = function (uri, filename, callback) {
+    request.head(uri, function (err, res, body) {
+        request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
+    });
 };
 
 function SendCaptcha(src, callback){
@@ -242,9 +243,9 @@ vk.setCaptchaHandler((src,again) => {
     });
 });
 
-var quiz_data = new Map();
-var intervalPeriods = new Map();
-var intervals = new Map();
+const quiz_data = new Map();
+const intervalPeriods = new Map();
+
 
 function formatVkPhotoString(id, owner_id, access_key)
 {
@@ -253,8 +254,8 @@ function formatVkPhotoString(id, owner_id, access_key)
 
 function pickLargestVkPhotoLink(photo)
 {
-    var links = [photo.photo_75, photo.photo_130, photo.photo_604, photo.photo_807, photo.photo_1280, photo.photo_2560];
-    var i = links.length - 1;
+    const links = [photo.photo_75, photo.photo_130, photo.photo_604, photo.photo_807, photo.photo_1280, photo.photo_2560];
+    let i = links.length - 1;
     while(!links[i])
         --i;
 
@@ -266,18 +267,16 @@ function pickLargestVkPhotoLink(photo)
 
 function parseGelbooruPic(body)
 {
-    var $ = cheerio.load(body);
+    const $ = cheerio.load(body);
 
-    var result = $('#image').attr('src');
-
-    return result;
+    return $('#image').attr('src');
 }
 
 function parseGelbooruPicId(body)
 {
-    var $ = cheerio.load(body);
+    const $ = cheerio.load(body);
 
-    var result = [];
+    const result = [];
     $('.thumb').each(function (i,obj) {
         result.push($(obj).attr('id'));
     });
@@ -287,11 +286,12 @@ function parseGelbooruPicId(body)
 
 vk.on('message',(msg) =>
 {
-    var msgtext = "";
+    let request_str;
+    let msgtext = "";
     if(msg.text != null)
         msgtext = msg.text;
-    var sender = msg.user;
-    var chat_id = msg.chat;
+    const sender = msg.user;
+    const chat_id = msg.chat;
 
     postedPic = false;
 
@@ -310,7 +310,7 @@ vk.on('message',(msg) =>
         vk.upload.message({
             file: picLink
         }).then(function(data) {
-            var pik_id ="photo"+formatVkPhotoString(data['id'],data['owner_id']);
+            const pik_id = "photo" + formatVkPhotoString(data['id'], data['owner_id']);
           last_attach = pik_id;
             return msg.send(message,{ attach: pik_id, fwd:false});
         });
@@ -449,10 +449,10 @@ vk.on('message',(msg) =>
 
     function launch_question()
     {
-        var line = randomArrayElement(quiz_data.get(chat_id).question_base).split('|');
+        const line = randomArrayElement(quiz_data.get(chat_id).question_base).split('|');
 
         quiz_data.get(chat_id).quiz_answer = line[1].trim();
-        var question = line[0] + '\n' + quiz_data.get(chat_id).quiz_answer.length +' букв';
+        const question = line[0] + '\n' + quiz_data.get(chat_id).quiz_answer.length + ' букв';
         quiz_data.get(chat_id).question = question;
 
         quiz_data.get(chat_id).quiz_hints = ['Первая буква ' + quiz_data.get(chat_id).quiz_answer.charAt(0),'Последняя буква ' + quiz_data.get(chat_id).quiz_answer.charAt(quiz_data.get(chat_id).quiz_answer.length - 1), shuffleString(quiz_data.get(chat_id).quiz_answer)];
@@ -484,7 +484,7 @@ vk.on('message',(msg) =>
 
     function printLeaderBoard()
     {
-        var scores = 'Текущий счет:\n';
+        let scores = 'Текущий счет:\n';
         Array.from(quiz_data.get(chat_id).leaderboard.values()).filter((x) => x.points > 0).sort(function (a, b) {
             return -(a.points - b.points);
         }).forEach((value) => scores+=value.fullname + ' ' + value.points + '\n');
@@ -504,7 +504,7 @@ vk.on('message',(msg) =>
     {
         if (quiz_data.get(chat_id).quiz_hints.length > 0)
         {
-            var hint = quiz_data.get(chat_id).quiz_hints[0];
+            const hint = quiz_data.get(chat_id).quiz_hints[0];
             quiz_data.get(chat_id).quiz_hints.shift();
             sendMessage(hint, false);
         }
@@ -541,8 +541,8 @@ vk.on('message',(msg) =>
         console.log('Attempting pic request');
         if (!postedPic)
         {
-            var services = [requestRandomGelbooruPic, requestRandomRedditPic, requestRandomYanderePic];
-            var chosen = randomArrayElement(services);
+            const services = [requestRandomGelbooruPic, requestRandomRedditPic, requestRandomYanderePic];
+            const chosen = randomArrayElement(services);
             console.log(chosen.name);
             postPicFromService(chosen,title);
         }
@@ -603,20 +603,20 @@ vk.on('message',(msg) =>
     function requestReddit(subreddit,callback)
     {
         request.get("https://www.reddit.com/r/" + subreddit + "/new/.json", function (err, res, body) {
-            var answer = parseRedditPost(body);
+            const answer = parseRedditPost(body);
             callback(answer);
         });
     }
 
     function requestGelbooru(tag, callback)
     {
-        var url = "http://gelbooru.com/index.php?page=post&s=list&tags=" + tag + '+rating%3asafe';
+        const url = "http://gelbooru.com/index.php?page=post&s=list&tags=" + tag + '+rating%3asafe';
         request.get(url, function (err, res, body) {
-            var ids = parseGelbooruPicId(body);
+            const ids = parseGelbooruPicId(body);
 
-            var id = randomArrayElement(ids).slice(1);
+            const id = randomArrayElement(ids).slice(1);
 
-            var new_url = 'http://gelbooru.com/index.php?page=post&s=view&id=' + id;
+            const new_url = 'http://gelbooru.com/index.php?page=post&s=view&id=' + id;
 
             request.get(new_url, function (err, res, body) {
                 callback(parseGelbooruPic(body));
@@ -629,19 +629,17 @@ vk.on('message',(msg) =>
         request.get("https://yande.re/post?tags=" + tag, function (err, res, body) {
             if (body.indexOf('Nobody here but us chickens!') != -1) {
                 request.get("https://yande.re/tag?name=" + tag + "&type=&order=count", function (err, res, body) {
-                    //console.log(body);
-                    var elem_exp = /<td align="right">[^]*?>\?<\/a>/g;
 
-                    var count_exp = '<td align="right">.*?</td>';
-                    var title_exp = /title=.*?>/i;
+                    const elem_exp = /<td align="right">[^]*?>\?<\/a>/g;
 
-                    var matches = body.match(elem_exp);
+                    const count_exp = '<td align="right">.*?</td>';
+                    const title_exp = /title=.*?>/i;
 
-                    //console.log(matches);
+                    let matches = body.match(elem_exp);
 
-                    var counts = [];
-                    var sum = 0;
-                    var titles = [];
+                    const counts = [];
+                    let sum = 0;
+                    const titles = [];
 
                     if (!matches) {
                         sendMessage('No matches found!');
@@ -649,9 +647,8 @@ vk.on('message',(msg) =>
                     }
 
                     matches.forEach(function (elem) {
-                        //console.log(elem);
-                        var count = (+elem.match(new RegExp(count_exp)).toString().slice(6, -2));
-                        var title = elem.match(new RegExp(title_exp)).toString().slice(6, -2);
+                        const count = (+elem.match(new RegExp(count_exp)).toString().slice(6, -2));
+                        const title = elem.match(new RegExp(title_exp)).toString().slice(6, -2);
 
                         counts.push(count);
                         titles.push(title);
@@ -659,22 +656,21 @@ vk.on('message',(msg) =>
 
                     });
 
-                    //console.log(titles);
+                    const v = getRandomInt(0, sum);
 
-                    var v = getRandomInt(0, sum);
-
-                    var c = 0;
-                    var i = 0;
+                    let c = 0;
+                    let i = 0;
                     while (c < v) {
                         c += counts[i];
                         i++;
                     }
 
-                    var fixed_tag = titles[i];
+                    const fixed_tag = titles[i];
 
                     request_str += 'fixed to ' + decodeURIComponent(fixed_tag) + '\n';
 
-                    request.get("https://yande.re/post?tags=" + fixed_tag, function (err, res, body) {
+                    request.get("https://yande.re/post?tags=" + fixed_tag, function (err, res, body)
+                    {
                         callback(parseYanderesPic(body));
                     });
                 });
@@ -698,10 +694,10 @@ vk.on('message',(msg) =>
 
     if (msgtext.startsWith('!'))
     {
-        var words = msgtext.split(' ');
-        var command = words[0].slice(1);
-        var args = words.slice(1);
-        var request_str = generateRequestString(msg);
+        const words = msgtext.split(' ');
+        const command = words[0].slice(1);
+        const args = words.slice(1);
+        request_str = generateRequestString(msg);
 
         if (checkUserPrivileges(sender))
         {
@@ -762,7 +758,7 @@ vk.on('message',(msg) =>
                     if (args[0] == 'годнота')
                     {
                         if (godnota.size() > 0) {
-                            var photo_id = godnota.pickRandom();
+                            const photo_id = godnota.pickRandom();
                             sendMessageObject({attach: photo_id});
                         }
                         else
@@ -791,98 +787,7 @@ vk.on('message',(msg) =>
                     }
                 }
             }
-/*
-            if (command == 'yan') {
-                if (args.length == 0) {
-                    args = [randomArrayElement(defaultYandere)];
-                    request_str += 'fixed to ' + args[0] + '\n';
-                }
-                if (checkIgnore(args[0])) {
 
-
-                    request.get("https://yande.re/post?tags=" + args[0], function (err, res, body) {
-                        if (body.indexOf('Nobody here but us chickens!') != -1) {
-                            request.get("https://yande.re/tag?name=" + args[0] + "&type=&order=count", function (err, res, body) {
-                                //console.log(body);
-                                var elem_exp = /<td align="right">[^]*?>\?<\/a>/g;
-
-                                var count_exp = '<td align="right">.*?</td>';
-                                var title_exp = /title=.*?>/i;
-
-                                var matches = body.match(elem_exp);
-
-                                //console.log(matches);
-
-                                var counts = [];
-                                var sum = 0;
-                                var titles = [];
-
-                                if (!matches) {
-                                    sendMessage('No matches found!');
-                                    return;
-                                }
-
-                                matches.forEach(function (elem) {
-                                    //console.log(elem);
-                                    var count = (+elem.match(new RegExp(count_exp)).toString().slice(6, -2));
-                                    var title = elem.match(new RegExp(title_exp)).toString().slice(6, -2);
-
-                                    counts.push(count);
-                                    titles.push(title);
-                                    sum += count;
-
-                                });
-
-                                //console.log(titles);
-
-                                var v = getRandomInt(0, sum);
-
-                                var c = 0;
-                                var i = 0;
-                                while (c < v) {
-                                    c += counts[i];
-                                    i++;
-                                }
-
-                                args[0] = titles[i];
-
-                                request_str += 'fixed to ' + decodeURIComponent(args[0]) + '\n';
-
-                                request.get("https://yande.re/post?tags=" + args[0], function (err, res, body) {
-                                    processYandereRequest(body);
-                                });
-                            });
-                        }
-                        else {
-                            processYandereRequest(body);
-                        }
-                    });
-                }
-            }
-
-            if (command == 'gel')
-            {
-                requestRandomGelbooruPic();
-            }
-
-            if (command == 'pic' || command == 'пик') {
-                if (args.length == 0) {
-                    args = [randomArrayElement(defaultSubreddit)];
-                    request_str += 'fixed to ' + args[0] + '\n';
-                }
-                if (checkIgnore(args[0])) {
-                    request.get("https://www.reddit.com/r/" + args[0] + "/new/.json", function (err, res, body) {
-                        processContent(function () {
-                            return parseRedditPost(body, getRandomInt(0, 25));
-                        }, function (answer) {
-
-                        }, function (answer) {
-                            return bayan_checker.add(hashFnv32a(answer.link));
-                        });
-                    });
-                }
-            }
-*/
             if (command == 'bash') {
                 request.get('http://bohdash.com/random/bash/random.php', function (err, res, body) {
                     processContent(function () {
@@ -995,7 +900,7 @@ vk.on('message',(msg) =>
 
                 if (command == 'enable_pics') {
 
-                    var period = config.default_picture_period;
+                    let period = config.default_picture_period;
                     if (args.length > 0)
                     {
                         period = (+args[0]);
@@ -1005,7 +910,7 @@ vk.on('message',(msg) =>
                         sendMessage('Вообще-то модуль уже запущен, еще раз подумай.');
                     else {
                         sendMessage('Пикча запущена!');
-                        var interval = setInterval(postRandomPic, period * 60 * 1000);
+                        const interval = setInterval(postRandomPic, period * 60 * 1000);
                         intervals.set(chat_id, interval);
                         intervalPeriods.set(chat_id, period);
                         postRandomPic();
@@ -1049,18 +954,17 @@ vk.on('message',(msg) =>
                 if (command == 'addpic') {
                     if (checkMinArgsNumber(args, 1)) {
 
-                        var id = msg.id;
+                        const id = msg.id;
 
-                        var com = {message: (args[1] ? args.slice(1).join(' ') : ''), attach: []};
+                        let com = {message: (args[1] ? args.slice(1).join(' ') : ''), attach: []};
 
                         vk.api.messages.getById({message_ids: msg.id}).then(function (data) {
                             data.items[0].attachments.forEach(function (attachment) {
-                                var photo = attachment.photo;
-                                //var str = 'photo'+formatVkPhotoString(photo.id,photo.owner_id,photo.access_key);
+                                const photo = attachment.photo;
                                 vk.upload.message({
                                     file: pickLargestVkPhotoLink(photo)
                                 }).then(function (data) {
-                                    var pik_id = formatVkPhotoString(data['id'], data['owner_id']);
+                                    const pik_id = formatVkPhotoString(data['id'], data['owner_id']);
                                     com.attach.push('photo' + pik_id);
                                 });
                                 sendMessage('Команда ' + args[0] + (stationary_commands.has(args[0]) ? ' изменена!' : ' добавлена!'), false);
@@ -1073,19 +977,16 @@ vk.on('message',(msg) =>
                 if (command == 'addcom') {
                     if (checkMinArgsNumber(args, 1)) {
 
-                        var com;
+                        let com;
 
                         if (args.length > 1) {
-                            //parseForwardedMessagesIds(msg.fwd)
                             com = {message: args.slice(1).join(' ')};
                             sendMessage('Команда ' + args[0] + (stationary_commands.has(args[0]) ? ' изменена!' : ' добавлена!'), false);
                             stationary_commands.add(args[0], com);
                         }
                         else {
-                            //var response = vk.api.photos.getById({photos:msg.attach.photo.map((x) => x.get).join(',')}).then((response) => console.log(response));
                             command_queue.push({author: sender, key: args[0]});
                             sendMessage('Команда ' + args[0] + ' ждет назначения следующим сообщением автора', false);
-                            //console.log(com);
                         }
 
                     }
@@ -1122,7 +1023,7 @@ vk.on('message',(msg) =>
 });
 
 if (process.platform === "win32") {
-    var rl = require('readline').createInterface({
+    const rl = require('readline').createInterface({
         input: process.stdin,
         output: process.stdout
     });

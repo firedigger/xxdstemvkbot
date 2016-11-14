@@ -31,7 +31,7 @@ SerializableSet.prototype.clear = function () {
 SerializableSet.prototype.showValues = function (sep) {
     if (!sep)
         sep = ',';
-    var result = '';
+    let result = '';
     this.forEach(function (elem) {
        result+=elem+sep;
     });
@@ -60,23 +60,22 @@ SerializableSet.prototype.size = function ()
 
 SerializableSet.prototype.pickRandom = function ()
 {
-    var n = this.size();
-    var p = 1.0/n;
-    var result = undefined;
+    const n = this.size();
+
+    let k = Math.floor(Math.random() * n);
+    let result = undefined;
     this.forEach(function (value)
     {
-         var r = Math.random();
-         if (r <= p)
-         {
-             result = value;
-         }
-         console.log(p);
-         p/=(1-1.0/n);
+        if (k == 0)
+        {
+            result = value;
+        }
+        --k;
      });
     if (result)
         return result;
     else
-        throw new Error('pickRandom algorithm exception (might be expty set)');
+        throw new Error('pickRandom algorithm exception (might be empty set)');
 };
 
 SerializableSet.prototype.save_to_file = function (filename)
