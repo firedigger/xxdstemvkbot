@@ -538,9 +538,9 @@ vk.on('message',(msg) =>
 
     function postRandomPic(title)
     {
+        console.log('Attempting pic request');
         if (!postedPic)
         {
-            //var services = [requestRandomRedditPic];
             var services = [requestRandomGelbooruPic, requestRandomRedditPic, requestRandomYanderePic];
             var chosen = randomArrayElement(services);
             console.log(chosen.name);
@@ -551,35 +551,38 @@ vk.on('message',(msg) =>
 
     function postPicFromService(requestCallback, messageTitle)
     {
-        requestCallback(function (answer) {
-            if (!answer) {
-                sendMessage('Ошибка получения контента');
-                return;
-            }
-            if (answer.pic)
-                answer = answer.pic;
-            try
-            {
-                if (bayan_checker.add(hashFnv32a(answer)))
-                {
-                    ++bayan_counter;
-                    if (bayan_counter > max_bayan_counter)
-                    {
-                        sendMessage('Не смог найти ни одной новой пикчи, сорян');
+        try {
+            requestCallback(function (answer) {
+                if (!answer) {
+                    sendMessage('Ошибка получения контента');
+                    return;
+                }
+                if (answer.pic)
+                    answer = answer.pic;
+                try {
+                    if (bayan_checker.add(hashFnv32a(answer))) {
+                        ++bayan_counter;
+                        if (bayan_counter > max_bayan_counter) {
+                            sendMessage('Не смог найти ни одной новой пикчи, сорян');
+                        }
+                        else
+                        {
+                            console.log('WARNING! REPEAT INVOCATION!\n' + answer);
+                            postPicFromService(requestCallback, messageTitle);
+                        }
                     }
-                    else
-                        postPicFromService(requestCallback, messageTitle);
+                    else {
+                        sendVkPic(answer, messageTitle);
+                    }
                 }
-                else
-                {
-                    sendVkPic(answer, messageTitle);
+                catch (err) {
+                    sendMessage("хуйня какая-та!\n" + err);
                 }
-            }
-            catch (err)
-            {
-                sendMessage("хуйня какая-та!\n" + err);
-            }
-        },messageTitle);
+            }, messageTitle);
+        }catch (e)
+        {
+            sendMessage('Ошибка\n' + e);
+        }
     }
 
     function requestRandomRedditPic(callback)
@@ -1002,7 +1005,8 @@ vk.on('message',(msg) =>
                         sendMessage('Вообще-то модуль уже запущен, еще раз подумай.');
                     else {
                         sendMessage('Пикча запущена!');
-                        intervals.set(chat_id, setInterval(postRandomPic, period * 60 * 1000));
+                        var interval = setInterval(postRandomPic, period * 60 * 1000);
+                        intervals.set(chat_id, interval);
                         intervalPeriods.set(chat_id, period);
                         postRandomPic();
                     }
