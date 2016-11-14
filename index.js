@@ -910,10 +910,12 @@ vk.on('message',(msg) =>
                         sendMessage('Вообще-то модуль уже запущен, еще раз подумай.');
                     else {
                         sendMessage('Пикча запущена!');
-                        const interval = setInterval(postRandomPic, period * 60 * 1000);
+                        const title = 'Пикча каждые ' + period + ' минут.';
+                        const postCallback = function(){postRandomPic(title);};
+                        const interval = setInterval(postCallback, period * 60 * 1000);
                         intervals.set(chat_id, interval);
                         intervalPeriods.set(chat_id, period);
-                        postRandomPic();
+                        postCallback();
                     }
                 }
 
