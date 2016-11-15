@@ -610,23 +610,32 @@ vk.on('message',(msg) =>
 
     function requestGelbooru(tag, callback)
     {
-        try {
-            const url = "http://gelbooru.com/index.php?page=post&s=list&tags=" + tag + '+rating%3asafe';
-            request.get(url, function (err, res, body) {
-                const ids = parseGelbooruPicId(body);
+		const url = "http://gelbooru.com/index.php?page=post&s=list&tags=" + tag + '+rating%3asafe';
+		request.get(url, function (err, res, body) 
+		{
+			if (err)
+			{
+				console.log('Gelbooru request page exception\nLink:' + url + '\n' + e);
+				return;
+			}
+			
+			try 
+			{
+				const ids = parseGelbooruPicId(body);
+			}
+			catch (e)
+			{
+				console.log('Gelbooru pic exception\nLink1:' + url + '\nLink2:' + '\n' + e);
+			}
+			const id = randomArrayElement(ids).slice(1);
 
-                const id = randomArrayElement(ids).slice(1);
+			const new_url = 'http://gelbooru.com/index.php?page=post&s=view&id=' + id;
 
-                const new_url = 'http://gelbooru.com/index.php?page=post&s=view&id=' + id;
-
-                request.get(new_url, function (err, res, body) {
-                    callback(parseGelbooruPic(body));
-                });
-            });
-        }catch (e)
-        {
-            console.log('Gelbooru pic exception\nLink1:' + url + '\nLink2:' + '\n' + e);
-        }
+			request.get(new_url, function (err, res, body) {
+				callback(parseGelbooruPic(body));
+			});
+		});
+        
     }
 
     function requestYandere(tag, callback)
