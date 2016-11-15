@@ -615,7 +615,7 @@ vk.on('message',(msg) =>
 		{
 			if (err)
 			{
-				console.log('Gelbooru request page exception\nLink:' + url + '\n' + e);
+				console.log('Gelbooru request page exception\nLink:' + url + '\n' + err);
 				return;
 			}
 			
