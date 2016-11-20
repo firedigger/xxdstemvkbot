@@ -127,7 +127,7 @@ const longpoll = function (token)
         if (error.redirect_uri)
             console.log(error + '\n' + error.redirect_uri);
         else {
-            console.log(error);
+            console.log(JSON.stringify(error));
         }
     });
 };
@@ -136,25 +136,21 @@ if (config.token) {
     longpoll(config.token);
 }
 else {
-    const auth = vk.standloneAuth();
+    
     vk.setting({
-        app: config.app,
         login: config.login,
         pass: config.password,
         phone: config.phone
     });
+   const auth = vk.windowsAuth();
     auth.run()
-        .then((token) => {
-            console.log('Token:', token);
+        .then((user) => {
+            console.log('Token:', user.token);
             longpoll(token);
         })
         .catch((error) => {
-            if (error.redirect_uri)
-                console.log(error + '\n' + error.redirect_uri);
-            else
-            {
                 console.log(JSON.stringify(error));
-            }
+            
         });
 }
 
@@ -541,7 +537,7 @@ vk.on('message',(msg) =>
         console.log('Attempting pic request');
         if (!postedPic)
         {
-            const services = [requestRandomGelbooruPic, requestRandomRedditPic, requestRandomYanderePic];
+            const services = [ requestRandomRedditPic, requestRandomYanderePic];
             const chosen = randomArrayElement(services);
             console.log(chosen.name);
             postPicFromService(chosen,title);
