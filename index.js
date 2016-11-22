@@ -798,22 +798,16 @@ vk.on('message',(msg) =>
 
             if (command == 'bash') {
                 request.get('http://bohdash.com/random/bash/random.php', function (err, res, body) {
-                    processContent(function () {
-                            return parseBashQuote(body);
-                        }, sendMessage,
-                        function (answer) {
-                            return bayan_checker.add(hashFnv32a(answer));
-                        });
+                return sendMessage(parseBashQuote(body));
+                       
                 });
             }
 
             if (command == 'news') {
                 request.get('https://yandex.ru', function (err, res, body) {
-                    processContent(function () {
-                        return parseYandexNews(body);
-                    }, sendMessage, function (answer) {
-                        return bayan_checker.add(hashFnv32a(answer));
-                    });
+                    
+                          return sendMessage(parseYandexNews(body));
+                   
                 });
             }
 
