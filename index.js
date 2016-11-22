@@ -413,11 +413,21 @@ vk.on('message',(msg) =>
 
     function checkIgnore(arg)
     {
-        if (ignore_list.has(arg) && !checkAdminPrivileges(sender))
-            sendMessage("Эта хуйня в игноре!");
-        else
-            return true;
-        return false;
+        if (checkAdminPrivileges(sender)) return true;
+        if(arg.split(' ').length > 1) {
+           var ignored = false;
+            arg.split(' ').some(function(element) {
+                if (ignore_list.has(element)) 
+                     ignored = true;
+               
+            });
+                if(ignored)  {
+                sendMessage("Эта хуйня в игноре!");
+            return false;
+                }
+        } 
+       if (ignore_list.has(arg)) { sendMessage("Эта хуйня в игноре!"); return false;}
+        return true;
     }
 
     function disablePics()
@@ -634,6 +644,7 @@ vk.on('message',(msg) =>
 
     function requestYandere(tag, callback)
     {
+        if (checkIgnore(tag))
         request.get("https://yande.re/post?tags=" + tag, function (err, res, body) {
             if (body.indexOf('Nobody here but us chickens!') != -1) {
                 request.get("https://yande.re/tag?name=" + tag + "&type=&order=count", function (err, res, body) {
@@ -673,10 +684,10 @@ vk.on('message',(msg) =>
                         i++;
                     }
 
-                    const fixed_tag = titles[i];
+                    const fixed_tag = decodeURIComponent(titles[i]);
 
-                    request_str += 'fixed to ' + decodeURIComponent(fixed_tag) + '\n';
-
+                    request_str += 'fixed to ' + fixed_tag + '\n';
+                    if (checkIgnore(fixed_tag))
                     request.get("https://yande.re/post?tags=" + fixed_tag, function (err, res, body)
                     {
                         callback(parseYanderesPic(body));
@@ -732,8 +743,8 @@ vk.on('message',(msg) =>
 
                         if (args.length == 1)
                             requestRandomYanderePic(callback);
-                        else if (checkIgnore(args[1]))
-                            requestYandere(args[1],callback);
+                        else 
+                            requestYandere(args.slice(1).join(' '),callback);
                     }
 
                     if (args[0] == 'reddit')
@@ -748,7 +759,7 @@ vk.on('message',(msg) =>
                             requestReddit(args[1],callback);
                     }
 
-                    if (args[0] == 'gel')
+                  /* хуй залупа  if (args[0] == 'gel')
                     {
                         var callback = function (content) {
                             sendVkPic(content,request_str);
@@ -758,7 +769,7 @@ vk.on('message',(msg) =>
                             requestRandomGelbooruPic(callback);
                         else if (checkIgnore(args[1]))
                             requestGelbooru(args[1],callback);
-                    }
+                    }*/
                     if (args[0] == 'digger' || args[0] == 'dicker_photos' || args[0] == 'диккер')
                     {
                         sendMessageObject({message:"ееее диккер!", attach: randomArrayElement(dicker_photos)});
@@ -805,9 +816,7 @@ vk.on('message',(msg) =>
 
             if (command == 'news') {
                 request.get('https://yandex.ru', function (err, res, body) {
-                    
-                          return sendMessage(parseYandexNews(body));
-                   
+                    return sendMessage(parseYandexNews(body));
                 });
             }
 
