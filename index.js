@@ -1,5 +1,6 @@
 const request = require("request");
 const fs = require('fs');
+
 const vk = new (require('vk-io'));
 const cheerio = require('cheerio');
 const SerializableMap = require('./SerializableMap');
@@ -99,35 +100,31 @@ function disableAllPics()
     intervals.clear();
 }
 
-function parseYanderesPic(str)
-{
-    const reg_str = '<a class="directlink largeimg" href=.*?><span class="directlink-info">';
 
-    const regexp = new RegExp(reg_str, 'g');
-    const result = [];
-    str.match(regexp).forEach(function (elem)
-    {
-        result.push(elem.toString().slice(37,-32));
-    });
-    return randomArrayElement(result);
-}
 
 function parseRedditPost(str)
 {
     const children = JSON.parse(str)['data']['children'];
 
-    const index = getRandomInt(0, children.length);
+    
 
     let pic = undefined;
     let link = undefined;
-    const parsed_body = children[index]['data'];
+    for(var index = 0; index< children.length; index++) {
+          const parsed_body = children[index]['data'];
     if (parsed_body['preview'] && parsed_body['preview']['images'])
     {
         pic = parsed_body['preview']['images'][0]['source']['url'];
         link = parsed_body['permalink'];
     }
     const title = parsed_body['title'];
-    return {pic:pic,link:link,title:title};
+              if(pic == undefined || !bayan_checker.add(hashFnv32a(pic)))
+                  return {pic:pic,link:link,title:title}
+                  
+     
+    
+    }
+return null;
 }
 
 const longpoll = function (token)
@@ -313,16 +310,7 @@ vk.on('message',(msg) =>
     });
     command_queue = command_queue.filter((x) => x.key != '');
 
-    function sendVkPic(picLink,message)
-    {
-        vk.upload.message({
-            file: picLink
-        }).then(function(data) {
-            const pik_id = "photo" + formatVkPhotoString(data['id'], data['owner_id']);
-          last_attach = pik_id;
-            return msg.send(message,{ attach: pik_id, fwd:false});
-        });
-    }
+
     
     function getvkName(id,n_c,callback) {
         vk.api.users.get({
@@ -340,6 +328,17 @@ vk.on('message',(msg) =>
             return msg.send(message,{fwd:false});
         else
             return msg.send(request_str + message,{fwd:false});
+    }
+    
+        function sendVkPic(picLink,message)
+    {
+        vk.upload.message({
+            file: picLink
+        }).then(function(data) {
+            const pik_id = "photo" + formatVkPhotoString(data['id'], data['owner_id']);
+          last_attach = pik_id;
+            return msg.send(message,{ attach: pik_id, fwd:false});
+        });
     }
 
     function sendMessageWithFwd(message)
@@ -724,13 +723,33 @@ vk.on('message',(msg) =>
                     return false;
                 }
             }
+    
+
+    function parseYanderesPic(str)
+{
+    const reg_str = '<a class="directlink largeimg" href=.*?><span class="directlink-info">';
+    const regexp = new RegExp(reg_str, 'g');
+    const result = [];
+    str.match(regexp).forEach(function (elem)
+    { let elems = elem.toString().slice(37,-32);
+        if (result.length < 1 && !bayan_checker.add(hashFnv32a(elems))) {
+            result.push(elems);
+        }
+    });
+    if (result.length < 1) {
+         sendMessage("Забаянился");
+    return null;
+    }else
+    return randomArrayElement(result);
+}
+    
 function parseWeather(body,city, callback)
 {
     body = body.toLowerCase();
     city = city.toLowerCase();
   var pogoda;
     var parser = new xml2js.Parser();
-    var city_str = '<city id="(.*?)" region=".*" head=".*" type=".*" country=".*" part=".*" resort=".*" climate=".*">'+city;
+    var city_str = '<city id="(.*?)" region=".*" head=".*" type=".*" country=".*" part=".*" resort=".*" climate=".* ">'+city;
      const regexp = new RegExp(city_str,'g');
     var citys = body.match(regexp);
     if ((citys == null) || (citys.length < 1)) return callback("Хуевый город какой-то.");
@@ -793,6 +812,8 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
                     if (args[0] == 'yan')
                     {
                         var callback = function (content) {
+                            if(content == null)
+                            return;
                             sendVkPic(content,request_str);
                         };
 
@@ -851,6 +872,7 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
                     {
 
                         var callback = function (content) {
+                            if (content == null) return;
                             if (content.pic)
                                 sendVkPic(content.pic, request_str + content.title + '\n' + "https://www.reddit.com" + content.link);
                             else
