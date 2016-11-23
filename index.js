@@ -118,9 +118,10 @@ function parseRedditPost(str)
         link = parsed_body['permalink'];
     }
     const title = parsed_body['title'];
-              if(pic == undefined || !bayan_checker.add(hashFnv32a(pic)))
+              if(pic == undefined || !bayan_checker.add(hashFnv32a(pic))) {
                   return {pic:pic,link:link,title:title}
-                  
+              break
+              }
      
     
     }
@@ -568,38 +569,15 @@ vk.on('message',(msg) =>
 
     function postPicFromService(requestCallback, messageTitle)
     {
-        try {
-            requestCallback(function (answer) {
+         requestCallback(function (answer) {
                 if (!answer) {
-                    sendMessage('Ошибка получения контента');
+                    postPicFromService(requestCallback,messageTitle);
                     return;
                 }
                 if (answer.pic)
                     answer = answer.pic;
-                try {
-                    if (bayan_checker.add(hashFnv32a(answer))) {
-                        ++bayan_counter;
-                        if (bayan_counter > max_bayan_counter) {
-                            sendMessage('Не смог найти ни одной новой пикчи, сорян');
-                        }
-                        else
-                        {
-                            console.log('WARNING! REPEAT INVOCATION!\n' + answer);
-                            postPicFromService(requestCallback, messageTitle);
-                        }
-                    }
-                    else {
-                        sendVkPic(answer, messageTitle);
-                    }
-                }
-                catch (err) {
-                    sendMessage("хуйня какая-та!\n" + err);
-                }
+              return sendVkPic(answer, messageTitle);
             }, messageTitle);
-        }catch (e)
-        {
-            sendMessage('Ошибка\n' + e);
-        }
     }
 
     function requestRandomRedditPic(callback)
