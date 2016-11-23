@@ -8,7 +8,7 @@ const Recognize = require('recognize');
 const RoleManager = require('./RoleMaganer');
 const FlagCooldowner = require('./FlagCooldowner');
 const config = JSON.parse(fs.readFileSync('config.json'));
-
+const xml2js = require('xml2js');
 const commands_filename = config.commands_filename;
 const bayan_filename = config.bayan_filename;
 const ignore_list_filename = config.ignore_list_filename;
@@ -21,6 +21,18 @@ const ignore_list = new SerializableSet();
 const godnota = new SerializableSet();
 const roles = new RoleManager();
 const cooldown = new FlagCooldowner(config.cooldown);
+
+String.prototype.strtr = function strtr (replacePairs) {
+    "use strict";
+    var str = this.toString(), key, re;
+    for (key in replacePairs) {
+        if (replacePairs.hasOwnProperty(key)) {
+            re = new RegExp(key, "g");
+            str = str.replace(re, replacePairs[key]);
+        }
+    }
+    return str;
+}
 
 function hashFnv32a(str, asString, seed)
 {
@@ -187,6 +199,8 @@ function parseYandexNews(str)
     });
     return result;
 }
+
+
 
 function parseBashQuote(str)
 {
@@ -710,7 +724,48 @@ vk.on('message',(msg) =>
                     return false;
                 }
             }
-
+function parseWeather(body,city, callback)
+{
+    body = body.toLowerCase();
+    city = city.toLowerCase();
+  var pogoda;
+    var parser = new xml2js.Parser();
+    var city_str = '<city id="(.*?)" region=".*" head=".*" type=".*" country=".*" part=".*" resort="0" climate="">'+city;
+     const regexp = new RegExp(city_str,'g');
+    var citys = body.match(regexp);
+    if ((citys == null) || (citys.length < 1)) return callback("Хуевый город какой-то.");
+    var regex = /<city id="(.*?)"/g;
+    city = regex.exec(citys[0])[1];  
+request.get("http://informer.gismeteo.ru/xml/"+city+"_1.xml", function (err, res, body){
+parser.parseString(body, function (err, result) {
+ var wizz = new Array(
+     {
+         0 : "Ясно ☀ ",
+         1 : "Переменная облачность ⛅ ",
+         2 : "Облачно ☁ ",
+         3 : "Пасмурно "
+     },
+     {
+         4 : "Дождь ☔",
+         5 : "Ливень ",
+         6 : "Снег ❄",
+         7 : "Снег ❄",
+         8 : "Гроза ⚡",
+         9 : "Нет данных",
+         10 : "Без осадков"
+     }
+ );
+    
+result = result['MMWEATHER']['REPORT'][0]['TOWN'][0]['FORECAST'];
+   let wiz = result[0]['PHENOMENA'][0]['$'];
+ pogoda =  wiz['cloudiness'].strtr(wizz[0]);
+pogoda += wiz['precipitation'].strtr(wizz[1]);
+pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
+    return callback(pogoda);
+    });
+});
+     
+}
     if (msgtext.startsWith('!'))
     {
         const words = msgtext.split(' ');
@@ -819,7 +874,18 @@ vk.on('message',(msg) =>
                     return sendMessage(parseYandexNews(body));
                 });
             }
+            
+            if (command == 'погода' || command == "weather") {
+                if (checkMinArgsNumber(args,1))
+                request.get('https://pogoda.yandex.ru/static/cities.xml', function (err, res, body) {           
+                    return parseWeather(body, args.slice(0).join(' '), function(pogoda) {
+                        sendMessage(pogoda);
+                    });
+                   
+                });
+            }
 
+            
             if (command == 'ignore_list') {
                 sendMessage('Ignored list: ' + ignore_list.showValues(), false);
             }
