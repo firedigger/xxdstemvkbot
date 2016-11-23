@@ -730,7 +730,7 @@ function parseWeather(body,city, callback)
     city = city.toLowerCase();
   var pogoda;
     var parser = new xml2js.Parser();
-    var city_str = '<city id="(.*?)" region=".*" head=".*" type=".*" country=".*" part=".*" resort="0" climate="">'+city;
+    var city_str = '<city id="(.*?)" region=".*" head=".*" type=".*" country=".*" part=".*" resort=".*" climate=".*">'+city;
      const regexp = new RegExp(city_str,'g');
     var citys = body.match(regexp);
     if ((citys == null) || (citys.length < 1)) return callback("Хуевый город какой-то.");
