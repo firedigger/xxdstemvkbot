@@ -559,6 +559,7 @@ vk.on('message',(msg) =>
         console.log('Attempting pic request');
         if (!postedPic)
         {
+            bayan_counter = 0;
             const services = [ requestRandomRedditPic, requestRandomYanderePic];
             const chosen = randomArrayElement(services);
             console.log(chosen.name);
@@ -570,6 +571,9 @@ vk.on('message',(msg) =>
     function postPicFromService(requestCallback, messageTitle)
     {
          requestCallback(function (answer) {
+             ++bayan_counter;
+             if (bayan_counter > max_bayan_counter)
+                 return sendMessage("Забаянился");
                 if (!answer) {
                     postPicFromService(requestCallback,messageTitle);
                     return;
@@ -708,6 +712,7 @@ vk.on('message',(msg) =>
     const reg_str = '<a class="directlink largeimg" href=.*?><span class="directlink-info">';
     const regexp = new RegExp(reg_str, 'g');
     const result = [];
+    try {
     str.match(regexp).forEach(function (elem)
     { let elems = elem.toString().slice(37,-32);
         if (result.length < 1 && !bayan_checker.add(hashFnv32a(elems))) {
@@ -719,6 +724,11 @@ vk.on('message',(msg) =>
     return null;
     }else
     return randomArrayElement(result);
+    }catch(e) {
+        sendMessage("Че-т хуйня какая-та");
+        return null;
+        
+    }
 }
     
 function parseWeather(body,city, callback)
@@ -727,7 +737,7 @@ function parseWeather(body,city, callback)
     city = city.toLowerCase();
   var pogoda;
     var parser = new xml2js.Parser();
-    var city_str = '<city id="(.*?)" region=".*" head=".*" type=".*" country=".*" part=".*" resort=".*" climate=".* ">'+city;
+    var city_str = '<city id=".*" region=".*" head=".*" type=".*" country=".*" part=".*" resort=".*" climate=".*">'+city;
      const regexp = new RegExp(city_str,'g');
     var citys = body.match(regexp);
     if ((citys == null) || (citys.length < 1)) return callback("Хуевый город какой-то.");
