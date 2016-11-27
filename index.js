@@ -105,7 +105,7 @@ function disableAllPics()
 function parseRedditPost(str)
 {
     const children = JSON.parse(str)['data']['children'];
-
+if(children.length == 0) return null;
     
 
     let pic = undefined;
@@ -428,9 +428,10 @@ vk.on('message',(msg) =>
     function checkIgnore(arg)
     {
         if (checkAdminPrivileges(sender)) return true;
-        if(arg.split(' ').length > 1) {
+        try {
+            var args = arg.split(' ');
            var ignored = false;
-            arg.split(' ').some(function(element) {
+            args.some(function(element) {
                 if (ignore_list.has(element)) 
                      ignored = true;
                
@@ -439,11 +440,11 @@ vk.on('message',(msg) =>
                 sendMessage("Эта хуйня в игноре!");
             return false;
                 }
-        } 
+        }catch(e) {
        if (ignore_list.has(arg)) { sendMessage("Эта хуйня в игноре!"); return false;}
         return true;
     }
-
+    }
     function disablePics()
     {
         if (intervals.has(chat_id))
@@ -639,7 +640,7 @@ vk.on('message',(msg) =>
 
     function requestYandere(tag, callback)
     {
-        if (checkIgnore(tag))
+        if (!checkIgnore(tag)) return;
         request.get("https://yande.re/post?tags=" + tag, function (err, res, body) {
             if (body.indexOf('Nobody here but us chickens!') != -1) {
                 request.get("https://yande.re/tag?name=" + tag + "&type=&order=count", function (err, res, body) {
@@ -834,7 +835,7 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
                         else if (checkIgnore(args[1]))
                             requestGelbooru(args[1],callback);
                     }*/
-                    if (args[0] == 'digger' || args[0] == 'dicker_photos' || args[0] == 'диккер')
+                    if (args[0] == 'digger' || args[0] == 'dicker' || args[0] == 'диккер')
                     {
                         sendMessageObject({message:"ееее диккер!", attach: randomArrayElement(dicker_photos)});
                     }
@@ -842,7 +843,7 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
                     {
                         if (godnota.size() > 0) {
                             const photo_id = godnota.pickRandom();
-                            sendMessageObject({attach: photo_id});
+                            sendMessageObject({message: request_str, attach: photo_id});
                         }
                         else
                         {
@@ -859,8 +860,9 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
                     if (checkIgnore(args[1]))
                     {
 
+                        console.log("requested reddit");
                         var callback = function (content) {
-                            if (content == null) return;
+                            if (content == null) return sendMessage("Хуевый сабреддит какой-то!");
                             if (content.pic)
                                 sendVkPic(content.pic, request_str + content.title + '\n' + "https://www.reddit.com" + content.link);
                             else
