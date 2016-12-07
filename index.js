@@ -427,23 +427,21 @@ vk.on('message',(msg) =>
 
     function checkIgnore(arg)
     {
+       
         if (checkAdminPrivileges(sender)) return true;
         try {
             var args = arg.split(' ');
+            if(args.length < 2) throw("fck");
            var ignored = false;
-            args.some(function(element) {
+            args.forEach(function(element) {
                 if (ignore_list.has(element)) 
                      ignored = true;
                
             });
-                if(ignored)  {
-                sendMessage("Эта хуйня в игноре!");
-            return false;
-                }
-        }catch(e) {
-       if (ignore_list.has(arg)) { sendMessage("Эта хуйня в игноре!"); return false;}
-        return true;
-    }
+            if(ignored)  {sendMessage("Эта хуйня в игноре!"); return false; }
+        }catch(e) {  if (ignore_list.has(arg)) { sendMessage("Эта хуйня в игноре!"); return false;} else
+        return true;}
+              
     }
     function disablePics()
     {
@@ -640,7 +638,7 @@ vk.on('message',(msg) =>
 
     function requestYandere(tag, callback)
     {
-        if (!checkIgnore(tag)) return;
+        if (checkIgnore(tag))
         request.get("https://yande.re/post?tags=" + tag, function (err, res, body) {
             if (body.indexOf('Nobody here but us chickens!') != -1) {
                 request.get("https://yande.re/tag?name=" + tag + "&type=&order=count", function (err, res, body) {
@@ -745,6 +743,7 @@ function parseWeather(body,city, callback)
     var regex = /<city id="(.*?)"/g;
     city = regex.exec(citys[0])[1];  
 request.get("http://informer.gismeteo.ru/xml/"+city+"_1.xml", function (err, res, body){
+    if(body.length<10)  return callback("Хуевый город какой-то.");
 parser.parseString(body, function (err, result) {
  var wizz = new Array(
      {
@@ -841,8 +840,14 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
                     }
                     if (args[0] == 'годнота')
                     {
+                    
                         if (godnota.size() > 0) {
-                            const photo_id = godnota.pickRandom();
+                            var photo_id = godnota.pickRandom();
+                            if(photo_id.sender){
+                                getvkName(photo_id.sender,"Nom", function(name) {
+                                    sendMessageObject({message: request_str + "Добавил в годноту: "+name, attach: photo_id.last_attach});
+                                    });
+                            }else
                             sendMessageObject({message: request_str, attach: photo_id});
                         }
                         else
@@ -927,14 +932,8 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
             {
                 if(last_attach != undefined)
                 {
-                    if (!godnota.add(last_attach))
-                    {
-                        sendMessage('Сохранил годноту!');
-                    }
-                    else
-                    {
-                        sendMessage('Уже сохранил бро!');
-                    }
+                    godnota.add({last_attach,sender});
+                    sendMessage('Сохранил годноту!');
                 }
                 else
                 {
