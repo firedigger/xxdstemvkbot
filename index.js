@@ -15,13 +15,13 @@ const bayan_filename = config.bayan_filename;
 const ignore_list_filename = config.ignore_list_filename;
 const roles_filename = config.roles_filename;
 const godnota_filename = config.godnota_filename;
-
 const stationary_commands = new SerializableMap();
 const bayan_checker = new SerializableSet();
 const ignore_list = new SerializableSet();
 const godnota = new SerializableSet();
 const roles = new RoleManager();
 const cooldown = new FlagCooldowner(config.cooldown);
+const conf_postpic = new SerializableMap();
 
 String.prototype.strtr = function strtr (replacePairs) {
     "use strict";
@@ -69,6 +69,7 @@ initializeStructure(bayan_checker, bayan_filename);
 initializeStructure(ignore_list, ignore_list_filename);
 initializeStructure(godnota, godnota_filename);
 initializeStructure(roles, roles_filename, config.admins);
+initializeStructure(conf_postpic, "", "");
 
 
 const defaultSubreddit = config.defaultSubreddits;
@@ -82,7 +83,6 @@ const max_bayan_counter = config.max_bayan_counter;
 let bayan_counter = 0;
 let command_queue = [];
 let last_attach = undefined;
-let postedPic = false;
 
 function getRandomInt(min, max)
 {
@@ -299,7 +299,8 @@ vk.on('message',(msg) =>
     const sender = msg.user;
     const chat_id = msg.chat;
 
-    postedPic = false;
+    conf_postpic.add(chat_id, false);
+        
 
     command_queue.forEach(function (elem) {
         if (elem.author == sender)
@@ -556,15 +557,16 @@ vk.on('message',(msg) =>
     function postRandomPic(title)
     {
         console.log('Attempting pic request');
-        if (!postedPic)
+        if (conf_postpic.get(chat_id) == false)
         {
+            conf_postpic.add(chat_id,true);
             bayan_counter = 0;
             const services = [ requestRandomRedditPic, requestRandomYanderePic];
             const chosen = randomArrayElement(services);
             console.log(chosen.name);
             postPicFromService(chosen,title);
         }
-        postedPic = true;
+        
     }
 
     function postPicFromService(requestCallback, messageTitle)
