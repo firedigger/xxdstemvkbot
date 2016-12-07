@@ -115,8 +115,8 @@ if(children.length == 0) return null;
     if (parsed_body['preview'] && parsed_body['preview']['images'])
     {
         pic = parsed_body['preview']['images'][0]['source']['url'];
-        link = parsed_body['permalink'];
     }
+        link = parsed_body['permalink'];
     const title = parsed_body['title'];
               if(pic == undefined || !bayan_checker.add(hashFnv32a(pic))) {
                   return {pic:pic,link:link,title:title}
@@ -871,7 +871,7 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
                             if (content.pic)
                                 sendVkPic(content.pic, request_str + content.title + '\n' + "https://www.reddit.com" + content.link);
                             else
-                                sendMessage(request_str + content.title + '\n' + "https://www.reddit.com" + content.link);
+                                sendMessage(content.title + '\n' + "https://www.reddit.com" + content.link);
                         };
 
                         requestReddit(args[0], callback);
