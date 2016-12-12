@@ -83,6 +83,7 @@ const max_bayan_counter = config.max_bayan_counter;
 let bayan_counter = 0;
 let command_queue = [];
 let last_attach = undefined;
+let self;
 
 function getRandomInt(min, max)
 {
@@ -132,6 +133,7 @@ const longpoll = function (token)
 {
     vk.setToken(token);
     vk.longpoll().then(() => {
+        
         console.log('Longpoll запущен!');
     }).catch((error) => {
      
@@ -153,6 +155,7 @@ else {
    const auth = vk.windowsAuth();
     auth.run()
         .then((user) => {
+        self = user.user;
             console.log('Token:', user.token);
             longpoll(user.token);
         })
@@ -298,10 +301,11 @@ vk.on('message',(msg) =>
         msgtext = msg.text;
     const sender = msg.user;
     const chat_id = msg.chat;
-
-    conf_postpic.add(chat_id, false);
-        
-
+    if(msg.chat){
+        console.log(msgtext+" " + chat_id + " " + sender);
+        if(sender != self)
+        conf_postpic.add(chat_id, false);
+    }
     command_queue.forEach(function (elem) {
         if (elem.author == sender)
         {
@@ -416,14 +420,14 @@ vk.on('message',(msg) =>
         return false;
     }
     
-       function getPrivilegesName(level)
+    function getPrivilegesName(level)
     {
        switch(level) {
            case 0: return "Пользователь";
            case 1: return "Модератор";
            case 2: return "Администратор";
            default: return "Лох";
-               }
+       }
     }
 
     function checkIgnore(arg)
@@ -442,8 +446,8 @@ vk.on('message',(msg) =>
             if(ignored)  {sendMessage("Эта хуйня в игноре!"); return false; }
         }catch(e) {  if (ignore_list.has(arg)) { sendMessage("Эта хуйня в игноре!"); return false;} else
         return true;}
-              
     }
+    
     function disablePics()
     {
         if (intervals.has(chat_id))
@@ -468,14 +472,11 @@ vk.on('message',(msg) =>
     function launch_question()
     {
         const line = randomArrayElement(quiz_data.get(chat_id).question_base).split('|');
-
         quiz_data.get(chat_id).quiz_answer = line[1].trim();
         const question = line[0] + '\n' + quiz_data.get(chat_id).quiz_answer.length + ' букв';
         quiz_data.get(chat_id).question = question;
-
         quiz_data.get(chat_id).quiz_hints = ['Первая буква ' + quiz_data.get(chat_id).quiz_answer.charAt(0),'Последняя буква ' + quiz_data.get(chat_id).quiz_answer.charAt(quiz_data.get(chat_id).quiz_answer.length - 1), shuffleString(quiz_data.get(chat_id).quiz_answer)];
         quiz_data.get(chat_id).quiz_msg_counter = 0;
-
         sendMessage('Новый вопрос викторины:\n' + question,false);
     }
 
@@ -557,15 +558,16 @@ vk.on('message',(msg) =>
     function postRandomPic(title)
     {
         console.log('Attempting pic request');
+        
         if (conf_postpic.get(chat_id) == false)
         {
-            conf_postpic.add(chat_id,true);
+            
             bayan_counter = 0;
             const services = [ requestRandomRedditPic, requestRandomYanderePic];
             const chosen = randomArrayElement(services);
             console.log(chosen.name);
             postPicFromService(chosen,title);
-        }
+        }else return;
         
     }
 
@@ -646,21 +648,16 @@ vk.on('message',(msg) =>
                 request.get("https://yande.re/tag?name=" + tag + "&type=&order=count", function (err, res, body) {
 
                     const elem_exp = /<td align="right">[^]*?>\?<\/a>/g;
-
                     const count_exp = '<td align="right">.*?</td>';
                     const title_exp = /title=.*?>/i;
-
                     let matches = body.match(elem_exp);
-
                     const counts = [];
                     let sum = 0;
                     const titles = [];
-
                     if (!matches) {
                         sendMessage('No matches found!');
                         return;
                     }
-
                     matches.forEach(function (elem) {
                         const count = (+elem.match(new RegExp(count_exp)).toString().slice(6, -2));
                         const title = elem.match(new RegExp(title_exp)).toString().slice(6, -2);
@@ -670,18 +667,14 @@ vk.on('message',(msg) =>
                         sum += count;
 
                     });
-
                     const v = getRandomInt(0, sum);
-
                     let c = 0;
                     let i = 0;
                     while (c < v) {
                         c += counts[i];
                         i++;
                     }
-
                     const fixed_tag = decodeURIComponent(titles[i]);
-
                     request_str += 'fixed to ' + fixed_tag + '\n';
                     if (checkIgnore(fixed_tag))
                     request.get("https://yande.re/post?tags=" + fixed_tag, function (err, res, body)
@@ -697,15 +690,15 @@ vk.on('message',(msg) =>
     }
 
 	function checkQuiz()
-            {
-                if (quiz_data.has(chat_id) && quiz_data.get(chat_id).quiz_answer)
-                    return true;
-                else
-                {
-                    sendMessage('Викторина не запущена!',true);
-                    return false;
-                }
-            }
+    {
+        if (quiz_data.has(chat_id) && quiz_data.get(chat_id).quiz_answer)
+            return true;
+        else
+        {
+            sendMessage('Викторина не запущена!',true);
+            return false;
+        }
+    }
     
 
     function parseYanderesPic(str)
@@ -1001,7 +994,7 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
                     else {
                         sendMessage('Пикча запущена!');
                         const title = 'Пикча каждые ' + period + ' минут.';
-                        const postCallback = function(){postRandomPic(title);};
+                        const postCallback = function(){postRandomPic(title);conf_postpic.add(chat_id,true);};
                         const interval = setInterval(postCallback, period * 60 * 1000);
                         intervals.set(chat_id, interval);
                         intervalPeriods.set(chat_id, period);
