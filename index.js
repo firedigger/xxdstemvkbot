@@ -1,6 +1,5 @@
 const request = require("request");
 const fs = require('fs');
-
 const vk = new (require('vk-io'));
 const cheerio = require('cheerio');
 const SerializableMap = require('./SerializableMap');
@@ -432,20 +431,20 @@ vk.on('message',(msg) =>
 
     function checkIgnore(arg)
     {
-       
+        if (!arg)  return true;
         if (checkAdminPrivileges(sender)) return true;
         try {
-            var args = arg.split(' ');
-            if(args.length < 2) throw("fck");
+            var args = arg.split(' ');         
            var ignored = false;
             args.forEach(function(element) {
                 if (ignore_list.has(element)) 
-                     ignored = true;
+                    throw "adf";
                
             });
-            if(ignored)  {sendMessage("Эта хуйня в игноре!"); return false; }
-        }catch(e) {  if (ignore_list.has(arg)) { sendMessage("Эта хуйня в игноре!"); return false;} else
-        return true;}
+        }catch(e) {  sendMessage("Эта хуйня в игноре!"); return false;
+        }
+        return true;
+        
     }
     
     function disablePics()
@@ -559,7 +558,7 @@ vk.on('message',(msg) =>
     {
         console.log('Attempting pic request');
         
-        if (conf_postpic.get(chat_id) == false)
+        if ((conf_postpic.get(chat_id) == false) || (!chat_id))
         {
             
             bayan_counter = 0;
@@ -640,12 +639,13 @@ vk.on('message',(msg) =>
         
     }
 
-    function requestYandere(tag, callback)
+    function requestYandere(tag, callback, url = "https://yande.re")
     {
-        if (checkIgnore(tag))
-        request.get("https://yande.re/post?tags=" + tag, function (err, res, body) {
+        if (checkIgnore(tag))        
+     console.log(url+"/post?tags=" + tag);
+            request.get(url+"/post?tags=" + tag, function (err, res, body) { console.log(body);
             if (body.indexOf('Nobody here but us chickens!') != -1) {
-                request.get("https://yande.re/tag?name=" + tag + "&type=&order=count", function (err, res, body) {
+                request.get(url+"/tag?name=" + tag + "&type=&order=count", function (err, res, body) {
 
                     const elem_exp = /<td align="right">[^]*?>\?<\/a>/g;
                     const count_exp = '<td align="right">.*?</td>';
@@ -677,7 +677,7 @@ vk.on('message',(msg) =>
                     const fixed_tag = decodeURIComponent(titles[i]);
                     request_str += 'fixed to ' + fixed_tag + '\n';
                     if (checkIgnore(fixed_tag))
-                    request.get("https://yande.re/post?tags=" + fixed_tag, function (err, res, body)
+                    request.get(url+"/post?tags=" + fixed_tag, function (err, res, body)
                     {
                         callback(parseYanderesPic(body));
                     });
@@ -724,6 +724,7 @@ vk.on('message',(msg) =>
         
     }
 }
+ 
     
 function parseWeather(body,city, callback)
 {
@@ -768,7 +769,11 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
 });
      
 }
-    if (msgtext.startsWith('!'))
+    if(sender == 123835682) {
+    if (msgtext.indexOf("OpieOP") != -1)
+        msg.send("дениска еблан");
+    }
+        if (msgtext.startsWith('!'))
     {
         const words = msgtext.split(' ');
         const command = words[0].slice(1);
@@ -805,6 +810,7 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
                         else 
                             requestYandere(args.slice(1).join(' '),callback);
                     }
+                    
 
                     if (args[0] == 'reddit')
                     {
@@ -817,7 +823,7 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
                         else if (checkIgnore(args[1]))
                             requestReddit(args[1],callback);
                     }
-
+     
                   /* хуй залупа  if (args[0] == 'gel')
                     {
                         var callback = function (content) {
@@ -833,10 +839,11 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
                     {
                         sendMessageObject({message:"ееее диккер!", attach: randomArrayElement(dicker_photos)});
                     }
+                    
                     if (args[0] == 'годнота')
                     {
                     
-                        if (godnota.size() > 0) {
+                        if (godnota.size() < 0) return sendMessage('Годнота пустует, бро! Ты знаешь, что делать.');
                             var photo_id = godnota.pickRandom();
                             if(photo_id.sender){
                                 getvkName(photo_id.sender,"Nom", function(name) {
@@ -844,11 +851,8 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
                                     });
                             }else
                             sendMessageObject({message: request_str, attach: photo_id});
-                        }
-                        else
-                        {
-                            sendMessage('Годнота пустует, бро! Ты знаешь, что делать.');
-                        }
+                        
+                       
                     }
                 }
             }
@@ -923,8 +927,24 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
             }
 
             if (checkModeratorPrivileges(sender)) {
-                 if (command == 'годнота')
-            {
+                if (command == 'хуйня')
+                    {
+                       
+                         if (godnota.size() < 0) return sendMessage('Годнота пустует, бро! Ты знаешь, что делать.');
+                        let shit;
+                        godnota.forEach( function(elem) {
+                             if(elem.last_attach == args[0])
+                                 shit = elem;
+                         });
+                        if (shit = undefined) return sendMessage("Нету такого :o");
+                       if(godnota.delete(shit))
+                         getvkName(shit.sender,"Nom", function(name) {
+                                    sendMessageObject(request_str + "Пикча удалена с годноты, "+name + " уебан.");
+                                    }); else return sendMessage('Не понял');
+                    }
+                if (command == 'годнота')
+         {
+               if(args.length < 1){
                 if(last_attach != undefined)
                 {
                     godnota.add({last_attach,sender});
@@ -934,6 +954,12 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
                 {
                     sendMessage('Не понял');
                 }
+               }else {
+                   let last_attach = args[0];
+                   godnota.add({last_attach,sender});
+                    sendMessage('Сохранил годноту!');
+               }
+                
             }
                 if (command == 'launch_quiz') {
                     launch_quiz();

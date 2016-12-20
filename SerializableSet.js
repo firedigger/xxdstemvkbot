@@ -49,7 +49,10 @@ SerializableSet.prototype.add = function (elem)
 
 SerializableSet.prototype.delete = function (elem)
 {
+    if (!this.values.has(elem))
+        return false;
     this.values.delete(elem);
+     return true;
 };
 
 SerializableSet.prototype.size = function ()
