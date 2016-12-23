@@ -100,7 +100,9 @@ function disableAllPics()
     intervals.clear();
 }
 
-
+setInterval(function() {
+   saveFiles();
+}, 90000);
 
 function parseRedditPost(str)
 {
@@ -591,10 +593,6 @@ vk.on('message',(msg) =>
         requestReddit(randomArrayElement(defaultSubreddit),callback);
     }
 
-    function requestRandomGelbooruPic(callback)
-    {
-        requestGelbooru(randomArrayElement(defaultGelbooru),callback);
-    }
 
     function requestRandomYanderePic(callback)
     {
@@ -639,12 +637,17 @@ vk.on('message',(msg) =>
         
     }
 
-    function requestYandere(tag, callback, url = "https://yande.re")
+    function requestYandere(tag, callback, page = 1,url = "https://yande.re")
     {
         if (checkIgnore(tag))        
-     console.log(url+"/post?tags=" + tag);
-            request.get(url+"/post?tags=" + tag, function (err, res, body) { console.log(body);
+var tagi = tag + " -"+ignore_list.showValues(" -");
+        console.log(url+"/post?tags=" + tagi);
+            request.get(url+"/post?tags=" + tagi, function (err, res, body) { bayan_counter++;
+
             if (body.indexOf('Nobody here but us chickens!') != -1) {
+        
+                if(bayan_counter > max_bayan_counter) return sendMessage('No matches found!');
+                        
                 request.get(url+"/tag?name=" + tag + "&type=&order=count", function (err, res, body) {
 
                     const elem_exp = /<td align="right">[^]*?>\?<\/a>/g;
@@ -676,17 +679,31 @@ vk.on('message',(msg) =>
                     }
                     const fixed_tag = decodeURIComponent(titles[i]);
                     request_str += 'fixed to ' + fixed_tag + '\n';
-                    if (checkIgnore(fixed_tag))
-                    request.get(url+"/post?tags=" + fixed_tag, function (err, res, body)
-                    {
-                        callback(parseYanderesPic(body));
-                    });
+                    if (checkIgnore(fixed_tag)) 
+                        requestYandere(fixed_tag, callback);
+
                 });
             }
             else {
-                callback(parseYanderesPic(body));
+                let reg_str = '<\/span> <a href=".*">(.*?)<\/a> <a';
+                let regexp = new RegExp(reg_str,'g');
+                let page_count;
+                try {page_count = regexp.exec(body)[1];} catch(e){  
+                   try{
+                       let regexp = new RegExp('<div class="pagination">.*<a href=".*">.*<\/a> <a class="next_page" rel="next" href=".*">.*<\/a><\/div>','g');
+                       let bodys = regexp.exec(body).toString();
+                       if(!bodys) { page_count = 1; page = 1;} else{
+                           var pages_counts = new RegExp('<a href=".*">(.*)<\/a> <a','g');
+                           page_count = pages_counts.exec(bodys)[1];
+                       }}catch(e){page_count = 1; page = 1;}   
+                }                    
+                if(page <= page_count)
+                    request.get(url+"/post?tags=" + tagi + "&page="+page  , function (err, res, body) {
+                        callback(parseYanderesPic(body,tag,callback, page));                         
+                    });
+                else return sendMessage('Забаянился');
             }
-        });
+                                                                            });
     }
 
 	function checkQuiz()
@@ -701,7 +718,7 @@ vk.on('message',(msg) =>
     }
     
 
-    function parseYanderesPic(str)
+    function parseYanderesPic(str,tag, callback, page)
 {
     const reg_str = '<a class="directlink largeimg" href=.*?><span class="directlink-info">';
     const regexp = new RegExp(reg_str, 'g');
@@ -714,7 +731,8 @@ vk.on('message',(msg) =>
         }
     });
     if (result.length < 1) {
-         sendMessage("Забаянился");
+        if(str.indexOf('<span class="next_page disabled">Next →</span>') != -1) { sendMessage('Забаянился'); return null;}else
+        requestYandere(tag,callback,page+1);
     return null;
     }else
     return randomArrayElement(result);
@@ -805,6 +823,7 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
                             sendVkPic(content,request_str);
                         };
 
+                        bayan_counter = 0;
                         if (args.length == 1)
                             requestRandomYanderePic(callback);
                         else 
