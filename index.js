@@ -633,6 +633,7 @@ vk.on('message',(msg) =>
 
     function requestYandere(tag, callback, page = 1,url = "https://yande.re")
     {
+        console.log("requested page "+page);
         if (checkIgnore(tag))        
 var tagi = tag + " -"+ignore_list.showValues(" -");
         console.log(url+"/post?tags=" + tagi);
@@ -686,11 +687,12 @@ var tagi = tag + " -"+ignore_list.showValues(" -");
                    try{
                        let regexp = new RegExp('<div class="pagination">.*<a href=".*">.*<\/a> <a class="next_page" rel="next" href=".*">.*<\/a><\/div>','g');
                        let bodys = regexp.exec(body).toString();
-                       if(!bodys) { page_count = 1; page = 1;} else{
+                       if(!bodys) { page_count = 1;} else{
                            var pages_counts = new RegExp('<a href=".*">(.*)<\/a> <a','g');
                            page_count = pages_counts.exec(bodys)[1];
-                       }}catch(e){page_count = 1; page = 1;}   
+                       }}catch(e){page_count = 1;}   
                 }                    
+                 console.log("page "+page);
                 if(page <= page_count)
                     request.get(url+"/post?tags=" + tagi + "&page="+page  , function (err, res, body) {
                         callback(parseYanderesPic(body,tag,callback, page));                         
@@ -753,7 +755,8 @@ request.get("http://api.openweathermap.org/data/2.5/weather?q="+encodeURICompone
          "Cloudsovercast" : "Переменная облачность ⛅ ",
          "Clouds" : "Облачно ☁ ",
          "Rainlight" : "Пасмурно ☁",
-         "Rain": "Дождь ☔"
+         "Rain": "Дождь ☔",
+         "Mist": "Туман 🌫"
      },
      {
          4 : "Дождь ☔",
