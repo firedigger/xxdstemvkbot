@@ -51,6 +51,11 @@ RoleManager.prototype.deop = function (id)
     return level;
 };
 
+RoleManager.prototype.forEach = function (callback)
+{
+    this.Privileges.forEach(callback);
+};
+
 RoleManager.prototype.save_to_file = function (filename)
 {
     this.Privileges.save_to_file(filename);

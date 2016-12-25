@@ -8,7 +8,6 @@ const Recognize = require('recognize');
 const RoleManager = require('./RoleMaganer');
 const FlagCooldowner = require('./FlagCooldowner');
 const config = JSON.parse(fs.readFileSync('config.json'));
-const xml2js = require('xml2js');
 const commands_filename = config.commands_filename;
 const bayan_filename = config.bayan_filename;
 const ignore_list_filename = config.ignore_list_filename;
@@ -102,32 +101,27 @@ function disableAllPics()
 
 setInterval(function() {
    saveFiles();
-}, 90000);
+}, 900000);
 
 function parseRedditPost(str)
 {
+    try{
     const children = JSON.parse(str)['data']['children'];
 if(children.length == 0) return null;
-    
-
     let pic = undefined;
     let link = undefined;
     for(var index = 0; index< children.length; index++) {
-          const parsed_body = children[index]['data'];
+        const parsed_body = children[index]['data'];
     if (parsed_body['preview'] && parsed_body['preview']['images'])
-    {
         pic = parsed_body['preview']['images'][0]['source']['url'];
-    }
         link = parsed_body['permalink'];
-    const title = parsed_body['title'];
-              if(pic == undefined || !bayan_checker.add(hashFnv32a(pic))) {
-                  return {pic:pic,link:link,title:title}
-              break
-              }
-     
-    
-    }
-return null;
+        const title = parsed_body['title'];
+        if(pic == undefined || !bayan_checker.add(hashFnv32a(pic))) {
+            return {pic:pic,link:link,title:title};
+            break;
+        }
+    }throw "";
+    }catch(e){ return null; }
 }
 
 const longpoll = function (token)
@@ -149,11 +143,12 @@ if (config.token) {
 else {
     
     vk.setting({
+        app: config.app,
         login: config.login,
         pass: config.password,
         phone: config.phone
     });
-   const auth = vk.windowsAuth();
+   const auth = vk.standaloneAuth();
     auth.run()
         .then((user) => {
         self = user.user;
@@ -434,7 +429,6 @@ vk.on('message',(msg) =>
     function checkIgnore(arg)
     {
         if (!arg)  return true;
-        if (checkAdminPrivileges(sender)) return true;
         try {
             var args = arg.split(' ');         
            var ignored = false;
@@ -744,27 +738,22 @@ var tagi = tag + " -"+ignore_list.showValues(" -");
 }
  
     
-function parseWeather(body,city, callback)
+function parseWeather(city, callback)
 {
-    body = body.toLowerCase();
+    
     city = city.toLowerCase();
   var pogoda;
-    var parser = new xml2js.Parser();
-    var city_str = '<city id=".*" region=".*" head=".*" type=".*" country=".*" part=".*" resort=".*" climate=".*">'+city;
-     const regexp = new RegExp(city_str,'g');
-    var citys = body.match(regexp);
-    if ((citys == null) || (citys.length < 1)) return callback("Хуевый город какой-то.");
-    var regex = /<city id="(.*?)"/g;
-    city = regex.exec(citys[0])[1];  
-request.get("http://informer.gismeteo.ru/xml/"+city+"_1.xml", function (err, res, body){
-    if(body.length<10)  return callback("Хуевый город какой-то.");
-parser.parseString(body, function (err, result) {
+request.get("http://api.openweathermap.org/data/2.5/weather?q="+encodeURIComponent(city)+"&APPID=6c96e03be9732051d9c087b238050784", function (err, res, body){
+     if(!body.length<10)
+  body = JSON.parse(body);
+ if (body.cod != 200)  return callback("Хуевый город какой-то." );
  var wizz = new Array(
      {
-         0 : "Ясно ☀ ",
-         1 : "Переменная облачность ⛅ ",
-         2 : "Облачно ☁ ",
-         3 : "Пасмурно "
+         "Clear" : "Ясно ☀ ",
+         "Cloudsovercast" : "Переменная облачность ⛅ ",
+         "Clouds" : "Облачно ☁ ",
+         "Rainlight" : "Пасмурно ☁",
+         "Rain": "Дождь ☔"
      },
      {
          4 : "Дождь ☔",
@@ -776,14 +765,14 @@ parser.parseString(body, function (err, result) {
          10 : "Без осадков"
      }
  );
-    
-result = result['MMWEATHER']['REPORT'][0]['TOWN'][0]['FORECAST'];
-   let wiz = result[0]['PHENOMENA'][0]['$'];
- pogoda =  wiz['cloudiness'].strtr(wizz[0]);
-pogoda += wiz['precipitation'].strtr(wizz[1]);
-pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
+    pogoda =  body.weather[0].main.strtr(wizz[0]);
+ //   pogoda += body.weather[0].description+"\n";
+    pogoda += "\nВлажность: "+body.main.humidity+"%\n";
+    pogoda += "Облачность "+ body.clouds.all +"%\n";
+    pogoda += "Скорость ветра: "+ body.wind.speed +" м/с";
+pogoda += "\r\n Температура: " + Math.round(body.main.temp - 273.15) + " °C";
     return callback(pogoda);
-    });
+
 });
      
 }
@@ -912,15 +901,11 @@ pogoda += "\n " + result[0]['TEMPERATURE'][0]['$'].max + " °C";
             
             if (command == 'погода' || command == "weather") {
                 if (checkMinArgsNumber(args,1))
-                request.get('https://pogoda.yandex.ru/static/cities.xml', function (err, res, body) {           
-                    return parseWeather(body, args.slice(0).join(' '), function(pogoda) {
+                         
+                    parseWeather(args.slice(0).join(' '), function(pogoda) {
                         sendMessage(pogoda);
                     });
-                   
-                });
             }
-
-            
             if (command == 'ignore_list') {
                 sendMessage('Ignored list: ' + ignore_list.showValues(), false);
             }
