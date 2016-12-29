@@ -143,12 +143,11 @@ if (config.token) {
 else {
     
     vk.setting({
-        app: config.app,
         login: config.login,
         pass: config.password,
         phone: config.phone
     });
-   const auth = vk.standaloneAuth();
+   const auth = vk.windowsAuth();
     auth.run()
         .then((user) => {
         self = user.user;
@@ -196,7 +195,6 @@ function parseYandexNews(str)
     });
     return result;
 }
-
 
 
 function parseBashQuote(str)
@@ -756,12 +754,13 @@ request.get("http://api.openweathermap.org/data/2.5/weather?q="+encodeURICompone
          "Clouds" : "Облачно ☁ ",
          "Rainlight" : "Пасмурно ☁",
          "Rain": "Дождь ☔",
-         "Mist": "Туман 🌫"
+         "Mist": "Туман 🌫",
+         "Snow" : "Снег ❄",
      },
      {
          4 : "Дождь ☔",
          5 : "Ливень ",
-         6 : "Снег ❄",
+         
          7 : "Снег ❄",
          8 : "Гроза ⚡",
          9 : "Нет данных",
@@ -779,6 +778,15 @@ pogoda += "\r\n Температура: " + Math.round(body.main.temp - 273.15) 
 });
      
 }
+    
+function parseTimeNow(body)
+{
+   let regexp = new RegExp('<div class="city_view_clock city_clock"><div class="city_clock_board">(.*?)<span class="city_clock_board_secs">.*<\/span><\/div><div class="city_clock_info">','g');
+    let bodys = regexp.exec(body)[1].toString();
+    return bodys;
+}
+
+    
     if(sender == 123835682) {
     if (msgtext.indexOf("OpieOP") != -1)
         msg.send("дениска еблан");
@@ -899,6 +907,15 @@ pogoda += "\r\n Температура: " + Math.round(body.main.temp - 273.15) 
             if (command == 'news') {
                 request.get('https://yandex.ru', function (err, res, body) {
                     return sendMessage(parseYandexNews(body));
+                });
+            }
+            
+             if (command == 'время' || command == 'time') {
+                 request.get("http://www.timeserver.ru/city/search.html?query="+encodeURIComponent(args[0]), function (err, res, body){
+                      if(body.indexOf('Город "'+args[0]+'" не найден :(') != -1)
+                          return sendMessage("Хуевый город какой-то.");
+                     else
+                         return sendMessage(parseTimeNow(body));
                 });
             }
             
