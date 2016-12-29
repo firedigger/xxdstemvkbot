@@ -953,36 +953,46 @@ function parseTimeNow(body)
             if (checkModeratorPrivileges(sender)) {
                 if (command == 'хуйня')
                     {
-                       
+                     let photo;
+                       if(args.length < 1)
+                           photo = last_attach;
+                        else 
+                            photo = args[0];
                          if (godnota.size() < 0) return sendMessage('Годнота пустует, бро! Ты знаешь, что делать.');
-                        let shit;
-                        godnota.forEach( function(elem) {
-                             if(elem.last_attach == args[0])
+                        var shit;
+                        godnota.forEach(function(elem) {
+                             if(elem.last_attach == photo){
                                  shit = elem;
+                                 console.log(elem);
+                             return elem;    
+                             }
                          });
-                        if (shit = undefined) return sendMessage("Нету такого :o");
+                        console.log(shit);
+                        if (shit == undefined) return sendMessage("Нету такого :o");
                        if(godnota.delete(shit))
                          getvkName(shit.sender,"Nom", function(name) {
-                                    sendMessageObject(request_str + "Пикча удалена с годноты, "+name + " уебан.");
+                                    sendMessage("Пикча удалена с годноты, "+name + " уебан.");
                                     }); else return sendMessage('Не понял');
                     }
                 if (command == 'годнота')
-         {
-               if(args.length < 1){
-                if(last_attach != undefined)
-                {
+                {   
+                    if(args.length > 0)
+                        var last_attach = args[0];
+                    else if(last_attach == undefined)
+                      return sendMessage('Не понял');
+                      var shit;
+                        godnota.forEach(function(elem) {
+                             if(elem.last_attach == last_attach){
+                                 shit = elem;
+                             return elem;    
+                             }
+                         });
+                     if (shit != undefined) 
+                         return getvkName(shit.sender,"Nom", function(name) {
+                             sendMessage("Пикчу в годноту уже добавил "+name + ".");});
                     godnota.add({last_attach,sender});
                     sendMessage('Сохранил годноту!');
-                }
-                else
-                {
-                    sendMessage('Не понял');
-                }
-               }else {
-                   let last_attach = args[0];
-                   godnota.add({last_attach,sender});
-                    sendMessage('Сохранил годноту!');
-               }
+
                 
             }
                 if (command == 'launch_quiz') {
