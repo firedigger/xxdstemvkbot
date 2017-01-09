@@ -61,13 +61,14 @@ function initializeStructure(structure,filename, initializerList)
             structure.initializeFromArray(initializerList);
     }
 }
-
+var twitchEmotes = [];
 initializeStructure(stationary_commands, commands_filename);
 initializeStructure(bayan_checker, bayan_filename);
 initializeStructure(ignore_list, ignore_list_filename);
 initializeStructure(godnota, godnota_filename);
 initializeStructure(roles, roles_filename, config.admins);
 initializeStructure(conf_postpic, "", "");
+initializeEmotes();
 
 
 const defaultSubreddit = config.defaultSubreddits;
@@ -86,6 +87,24 @@ let self;
 function getRandomInt(min, max)
 {
     return Math.floor(Math.random() * (max - min)) + min;
+}
+
+function initializeEmotes()
+{
+    request.get("https://twitchemotes.com/api_cache/v2/global.json", function (err, res, body){
+        let emote_list = JSON.parse(body).emotes; 
+        for (var emote in emote_list) {
+twitchEmotes.push(emote);
+        }
+    });
+      request.get("https://api.betterttv.net/2/emotes", function (err, res, body){
+        let emote_list = JSON.parse(body).emotes;   
+      for (var i in emote_list) {
+          let emote = emote_list[i];
+          twitchEmotes.push(emote.code);
+      }
+      });
+   
 }
 
 function shuffleString(str) {
@@ -554,18 +573,15 @@ vk.on('message',(msg) =>
         
         if ((conf_postpic.get(chat_id) == false) || (!chat_id))
         {
-            
             bayan_counter = 0;
-            const services = [ requestRandomRedditPic, requestRandomYanderePic];
-            const chosen = randomArrayElement(services);
-            console.log(chosen.name);
-            postPicFromService(chosen,title);
+            postPicFromService(requestRandomYanderePic,title);
         }else return;
         
     }
 
     function postPicFromService(requestCallback, messageTitle)
     {
+
          requestCallback(function (answer) {
              ++bayan_counter;
              if (bayan_counter > max_bayan_counter)
@@ -599,35 +615,6 @@ vk.on('message',(msg) =>
         });
     }
 
-    function requestGelbooru(tag, callback)
-    {
-		const url = "http://gelbooru.com/index.php?page=post&s=list&tags=" + tag + '+rating%3asafe';
-		request.get(url, function (err, res, body) 
-		{
-			if (err)
-			{
-				console.log('Gelbooru request page exception\nLink:' + url + '\n' + err);
-				return;
-			}
-			
-			try 
-			{
-				const ids = parseGelbooruPicId(body);
-				const id = randomArrayElement(ids).slice(1);
-
-				const new_url = 'http://gelbooru.com/index.php?page=post&s=view&id=' + id;
-
-				request.get(new_url, function (err, res, body) {
-					callback(parseGelbooruPic(body));
-				});
-			}
-			catch (e)
-			{
-				console.log('Gelbooru pic exception\nLink1:' + url + '\nLink2:' + '\n' + e);
-			}
-		});
-        
-    }
 
     function requestYandere(tag, callback, page = 1,url = "https://yande.re")
     {
@@ -672,7 +659,6 @@ var tagi = tag + " -"+ignore_list.showValues(" -");
                     }
                     const fixed_tag = decodeURIComponent(titles[i]);
                     request_str += 'fixed to ' + fixed_tag + '\n';
-                    if (checkIgnore(fixed_tag)) 
                         requestYandere(fixed_tag, callback);
 
                 });
@@ -693,7 +679,11 @@ var tagi = tag + " -"+ignore_list.showValues(" -");
                  console.log("page "+page);
                 if(page <= page_count)
                     request.get(url+"/post?tags=" + tagi + "&page="+page  , function (err, res, body) {
-                        callback(parseYanderesPic(body,tag,callback, page));                         
+                       parseYanderesPic(body,tag,callback, page, function(pic) {                          
+                           if(pic==null) return;
+                           callback(pic);    
+                       });
+                                             
                     });
                 else return sendMessage('Забаянился');
             }
@@ -712,7 +702,7 @@ var tagi = tag + " -"+ignore_list.showValues(" -");
     }
     
 
-    function parseYanderesPic(str,tag, callback, page)
+    function parseYanderesPic(str,tag, callback, page, retu)
 {
     const reg_str = '<a class="directlink largeimg" href=.*?><span class="directlink-info">';
     const regexp = new RegExp(reg_str, 'g');
@@ -720,19 +710,17 @@ var tagi = tag + " -"+ignore_list.showValues(" -");
     try {
     str.match(regexp).forEach(function (elem)
     { let elems = elem.toString().slice(37,-32);
-        if (result.length < 1 && !bayan_checker.add(hashFnv32a(elems))) {
-            result.push(elems);
-        }
+        if (result.length < 1 && !bayan_checker.add(hashFnv32a(elems))) 
+            result.push(elems);   
     });
     if (result.length < 1) {
-        if(str.indexOf('<span class="next_page disabled">Next →</span>') != -1) { sendMessage('Забаянился'); return null;}else
+        if(str.indexOf('<span class="next_page disabled">Next →</span>') != -1) { return null; }else
         requestYandere(tag,callback,page+1);
-    return null;
     }else
-    return randomArrayElement(result);
+    return retu(randomArrayElement(result));
     }catch(e) {
         sendMessage("Че-т хуйня какая-та");
-        return null;
+        return retu(null);
         
     }
 }
@@ -754,8 +742,9 @@ request.get("http://api.openweathermap.org/data/2.5/weather?q="+encodeURICompone
          "Clouds" : "Облачно ☁ ",
          "Rainlight" : "Пасмурно ☁",
          "Rain": "Дождь ☔",
-         "Mist": "Туман 🌫",
-         "Snow" : "Снег ❄",
+         "Mist": "Легкий туман 🌫",
+         "Fog": "Туман 🌫",
+         "Snow" : "Снег ❄"
      },
      {
          4 : "Дождь ☔",
@@ -788,8 +777,11 @@ function parseTimeNow(body)
 
     
     if(sender == 123835682) {
-    if (msgtext.indexOf("OpieOP") != -1)
-        msg.send("дениска еблан");
+        console.log(twitchEmotes.length);
+        for (var i in twitchEmotes) {
+    if (msgtext.indexOf(twitchEmotes[i]) != -1)
+       return msg.send("дениска еблан");
+        }
     }
         if (msgtext.startsWith('!'))
     {
@@ -819,7 +811,7 @@ function parseTimeNow(body)
                     {
                         var callback = function (content) {
                             if(content == null)
-                            return;
+                            return sendMessage("Забаянился");
                             sendVkPic(content,request_str);
                         };
 
