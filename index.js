@@ -355,8 +355,8 @@ vk.on('message',(msg) =>
             file: picLink
         }).then(function(data) {
             const pik_id = "photo" + formatVkPhotoString(data['id'], data['owner_id']);
-          last_attach = pik_id;
-            return msg.send(message,{ attach: pik_id, fwd:false});
+            last_attach = pik_id;
+            return msg.send(message,{ attachment: pik_id, fwd:false});
         });
     }
 
@@ -616,8 +616,12 @@ vk.on('message',(msg) =>
     }
 
 
-    function requestYandere(tag, callback, page = 1,url = "https://yande.re")
+    function requestYandere(tag, callback, page,url)
     {
+        if(!page)
+            page = 1;
+        if(!url)
+            url = "https://yande.re";
         console.log("requested page "+page);
         if (checkIgnore(tag))        
 var tagi = tag + " -"+ignore_list.showValues(" -");
@@ -848,7 +852,7 @@ function parseTimeNow(body)
                     }*/
                     if (args[0] == 'digger' || args[0] == 'dicker' || args[0] == 'диккер')
                     {
-                        sendMessageObject({message:"ееее диккер!", attach: randomArrayElement(dicker_photos)});
+                        sendMessageObject({message:"ееее диккер!", attachment: randomArrayElement(dicker_photos)});
                     }
                     
                     if (args[0] == 'годнота')
@@ -858,10 +862,10 @@ function parseTimeNow(body)
                             var photo_id = godnota.pickRandom();
                             if(photo_id.sender){
                                 getvkName(photo_id.sender,"Nom", function(name) {
-                                    sendMessageObject({message: request_str + "Добавил в годноту: "+name, attach: photo_id.last_attach});
+                                    sendMessageObject({message: request_str + "Добавил в годноту: "+name, attachment: photo_id.last_attach});
                                     });
                             }else
-                            sendMessageObject({message: request_str, attach: photo_id});
+                            sendMessageObject({message: request_str, attachment: photo_id});
                         
                        
                     }
@@ -968,24 +972,26 @@ function parseTimeNow(body)
                     }
                 if (command == 'годнота')
                 {   
-                    if(args.length > 0)
-                        var last_attach = args[0];
-                    else if(last_attach == undefined)
+                     let photo;
+                       if(args.length < 1)
+                           photo = last_attach;
+                        else 
+                            photo = args[0];
+                     if(photo == undefined)
                       return sendMessage('Не понял');
-                      var shit;
-                        godnota.forEach(function(elem) {
-                             if(elem.last_attach == last_attach){
-                                 shit = elem;
-                             return elem;    
-                             }
-                         });
-                     if (shit != undefined) 
+                    last_attach = photo;
+                    var shit;
+                    godnota.forEach(function(elem) {
+                        if(elem.last_attach == last_attach){
+                            shit = elem;
+                            return elem;    
+                        }
+                    });
+                    if (shit != undefined) 
                          return getvkName(shit.sender,"Nom", function(name) {
                              sendMessage("Пикчу в годноту уже добавил "+name + ".");});
                     godnota.add({last_attach,sender});
                     sendMessage('Сохранил годноту!');
-
-                
             }
                 if (command == 'launch_quiz') {
                     launch_quiz();
@@ -1092,17 +1098,18 @@ function parseTimeNow(body)
                     if (checkMinArgsNumber(args, 1)) {
 
                         const id = msg.id;
-
-                        let com = {message: (args[1] ? args.slice(1).join(' ') : ''), attach: []};
+                        console.log("здарова");
+                        let com = {message: (args[1] ? args.slice(1).join(' ') : ''), attachment: []};
 
                         vk.api.messages.getById({message_ids: msg.id}).then(function (data) {
                             data.items[0].attachments.forEach(function (attachment) {
                                 const photo = attachment.photo;
+                                console.log(photo);
                                 vk.upload.message({
                                     file: pickLargestVkPhotoLink(photo)
                                 }).then(function (data) {
                                     const pik_id = formatVkPhotoString(data['id'], data['owner_id']);
-                                    com.attach.push('photo' + pik_id);
+                                    com.attachment.push('photo' + pik_id);
                                 });
                                 sendMessage('Команда ' + args[0] + (stationary_commands.has(args[0]) ? ' изменена!' : ' добавлена!'), false);
                                 stationary_commands.add(args[0], com);

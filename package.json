@@ -1,8 +1,11 @@
 {
-  "name": "xxdstemvkbot",
+    "name": "xxdstemvkbot",
   "version": "1.0.0",
   "description": "vk bot",
   "main": "index.js",
+    "engines": {
+        "node": "6.1.0"
+    },
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -20,7 +23,6 @@
     "cheerio": "^0.22.0",
     "recognize": "^0.2.4",
     "request": "^2.76.0",
-    "vk-io": "^2.2.1",
-    "xml2js": "^0.4.17"
+    "vk-io": "^2.2.1"
   }
 }

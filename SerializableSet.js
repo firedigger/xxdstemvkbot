@@ -52,7 +52,7 @@ SerializableSet.prototype.delete = function (elem)
     if (!this.values.has(elem))
         return false;
     this.values.delete(elem);
-     return true;
+ return true;
 };
 
 SerializableSet.prototype.size = function ()
