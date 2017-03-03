@@ -653,11 +653,14 @@ vk.on('message',(msg) =>
 
     function requestYandere(tag, callback, page = 1)
     {
-        const url = "https://yande.re";
+        const url = randomArrayElement(["http://konachan.com","https://yande.re"]);
         const tag_url = url + "/post?page="+page+"&tags=" + tag;
+        console.log(url);
         request.get(tag_url, function (err, res, body)
         {
             bayan_counter++;
+            if(bayan_counter > max_bayan_counter)
+                return sendMessage('Забаянился');
             console.log("requested page "+page);
             if (body.indexOf('Nobody here but us chickens!') != -1)
             {
@@ -724,12 +727,15 @@ vk.on('message',(msg) =>
                         }    
                     }   
                 });
-                console.log(page_count);
+                console.log("total pages " + page_count);
                 const pics = [];
                 $('a.directlink.largeimg').each(function (j, elem)
                 {
                     const img_link = $(elem).attr('href');
                     if(!bayan_checker.add(hashFnv32a(img_link)))
+                        if(url == "http://konachan.com")
+                        pics.push("http://"+img_link.substr(2));
+                        else   
                         pics.push(img_link);
                 });
                 if (pics.length < 1)
@@ -737,11 +743,11 @@ vk.on('message',(msg) =>
                         requestYandere(tag, callback, page+1);
                     else
                         return sendMessage('Забаянился');
+            
                 callback(randomArrayElement(pics));
             }
         });
-                if(bayan_counter > max_bayan_counter)
-                return sendMessage('Забаянился');
+
     }
 
 	function checkQuiz()
