@@ -354,7 +354,7 @@ vk.on('message',(msg) =>
     if(msg.chat)
     {
         console.log(msgtext+" " + chat_id + " " + sender);
-        if(sender != self)
+        if(sender != 391072775)
         conf_postpic.add(chat_id, false);
     }
     command_queue.forEach(function (elem)
@@ -656,16 +656,16 @@ vk.on('message',(msg) =>
         });
     }
 
-    function requestYandere(tag, callback)
+    function requestYandere(tag, callback, page = 1)
     {
         const url = "https://yande.re";
-        const tag_url = url + "/post?tags=" + tag;
+        const tag_url = url + "/post?page="+page+"&tags=" + tag;
         request.get(tag_url, function (err, res, body)
         {
             bayan_counter++;
-
+            console.log("requested page "+page);
             if(bayan_counter > max_bayan_counter)
-                return sendMessage('No matches found!');
+                return sendMessage('Забаянлися');
 
             if (body.indexOf('Nobody here but us chickens!') != -1)
             {
@@ -703,7 +703,8 @@ vk.on('message',(msg) =>
                     counts.forEach(function (x) {
                         sum += x;
                     });
-
+                    if(sum < 1 )
+                        return sendMessage('No matches found!');
                     const v = getRandomInt(0, sum);
                     let c = 0;
                     let i = 0;
@@ -720,12 +721,30 @@ vk.on('message',(msg) =>
             else
             {
                 const $ = cheerio.load(body);
+                let page_count = 0;
+                $("div.pagination").find("a").each(function(n, wtf) 
+                {
+                    if(wtf.attribs.href.startsWith("/post?page="))
+                    {   
+                        let pages = wtf.children[0].data;
+                        if((pages.indexOf("→") < 1) && (!pages.startsWith("←"))) {
+                           return page_count = pages;
+                        }    
+                    }   
+                });
+                console.log(page_count);
                 const pics = [];
                 $('a.directlink.largeimg').each(function (j, elem)
                 {
                     const img_link = $(elem).attr('href');
-                    pics.push(img_link);
+                    if(!bayan_checker.add(hashFnv32a(img_link)))
+                        pics.push(img_link);
                 });
+                if (pics.length < 1)
+                    if(page_count > page)
+                        requestYandere(tag, callback, page+1);
+                    else
+                    return sendMessage('Забаянился');
                 callback(randomArrayElement(pics));
             }
         });
