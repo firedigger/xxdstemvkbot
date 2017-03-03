@@ -624,16 +624,11 @@ vk.on('message',(msg) =>
          requestCallback(function (answer)
          {
             ++bayan_counter;
-            if (bayan_counter > max_bayan_counter)
-                return sendMessage("Забаянился");
-             if (!answer)
-             {
-                postPicFromService(requestCallback,messageTitle);
-                return;
-             }
+             if(answer) {
              if (answer.pic)
                  answer = answer.pic;
               return sendVkPic(answer, messageTitle);
+             }
          }, messageTitle);
     }
 
@@ -664,9 +659,6 @@ vk.on('message',(msg) =>
         {
             bayan_counter++;
             console.log("requested page "+page);
-            if(bayan_counter > max_bayan_counter)
-                return sendMessage('Забаянлися');
-
             if (body.indexOf('Nobody here but us chickens!') != -1)
             {
                 request.get(url+"/tag?name=" + tag + "&type=&order=count", function (err, res, body)
@@ -744,10 +736,12 @@ vk.on('message',(msg) =>
                     if(page_count > page)
                         requestYandere(tag, callback, page+1);
                     else
-                    return sendMessage('Забаянился');
+                        return sendMessage('Забаянился');
                 callback(randomArrayElement(pics));
             }
         });
+                if(bayan_counter > max_bayan_counter)
+                return sendMessage('Забаянился');
     }
 
 	function checkQuiz()
@@ -849,8 +843,7 @@ vk.on('message',(msg) =>
                     {
                         callback = function (content)
                         {
-                            if (content == null)
-                                return sendMessage("Забаянился");
+                            if (content != null)
                             sendVkPic(content, request_str);
                         };
 
