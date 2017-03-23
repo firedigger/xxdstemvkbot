@@ -205,14 +205,6 @@ else
         });
 }
 
-const recognize = new Recognize('rucaptcha', {
-    key: config.rucaptcha
-});
-
-recognize.balanse(function(price)
-{
-    console.log('RuCaptcha Balance: ', price);
-});
 
 function randomArrayElement(arr)
 {
@@ -272,7 +264,7 @@ function download(uri, filename, callback)
         request(uri).pipe(fs.createWriteStream(filename)).on('close', callback);
     });
 };
-
+/*
 function SendCaptcha(src, callback)
 {
     download(src, 'captcha.png', function()
@@ -300,7 +292,7 @@ vk.setCaptchaHandler((src,again) =>
         });                         
     });
 });
-
+*/
 const quiz_data = new Map();
 const intervalPeriods = new Map();
 
